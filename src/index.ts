@@ -1,16 +1,19 @@
-const SQL_OPERATORS = new Set(["(", ")", ","]);
+const SQL_OPERATORS = new Set(["(", ")", ",", ";"]);
 
 type Nullable<T> = T | null;
 
 class Database {
   tables: Record<string, Table> = {};
 
-  addTable(tableName: string, table: Table): void {
-    if (this.tables[tableName]) throw new Error("Table already exists");
-    this.tables[tableName] = table;
+  addTable(table: Table): void {
+    if (table.name in this.tables) {
+      throw new Error("Table already exists.");
+    }
+
+    this.tables[table.name] = table;
   }
 
-  getTable(tableName: string) {
+  getTable(tableName: string): Table {
     const table = this.tables[tableName];
     if (!table) {
       throw new Error("Table does not exist.");
@@ -46,15 +49,19 @@ class Column {
   modifierPrimaryKey: boolean = false;
   modifierNotNull: boolean = false;
 
-  references: ColumnReference[] = [];
+  reference: Nullable<ColumnReference> = null;
 
   constructor(name: string, type: string) {
     this.name = name;
     this.type = type;
   }
 
-  addReference(tableName: string, columnName: string) {
-    this.references.push({ tableName, columnName } satisfies ColumnReference);
+  link(tableName: string, columnName: string) {
+    if (this.reference) {
+      throw new Error("Column already linked");
+    }
+
+    this.reference = { tableName, columnName } satisfies ColumnReference;
   }
 }
 
@@ -79,30 +86,98 @@ function tokenUtils(tokens: string[]) {
     return currentToken() === expectedToken;
   }
 
-  function enforce(expectedToken: string) {
-    if (!expect(expectedToken)) {
-      throw new Error(`Expected ${expectedToken}.`);
+  function expectSequenceInternal(sequence: string[]) {
+    // return false if there is no next token
+    if (!hasNextToken()) {
+      return false;
     }
 
+    let flag = true;
+    for (let i = 0; i < sequence.length; i++) {
+      const expectedToken = sequence[i];
+      if (peekToken(i) !== expectedToken) {
+        flag = false;
+      }
+    }
+
+    return flag;
+  }
+
+  function enforce(expectedToken: string) {
+    if (!expect(expectedToken)) {
+      throw new Error(`Got ${currentToken()}, but expected ${expectedToken}.`);
+    }
+    nextToken();
     return true;
   }
 
-  function getTokensUntil(expectedToken: string) {
+  function getTokensUntil(expectedToken: string | (string | string[])[]) {
     const tokensUntil: string[] = [];
     while (untilToken(expectedToken)) {
       tokensUntil.push(currentToken());
       nextToken();
     }
-
     return tokensUntil;
   }
 
-  function untilToken(expectedToken: string) {
-    return pos < tokens.length && !expect(expectedToken);
+  // go until, or );
+  // scanner.getTokensUntil([",", [")", ";"]])
+
+  function untilToken(expectedTokens: string | (string | string[])[]) {
+    // return false if there is no next token
+    if (!hasNextToken()) {
+      return false;
+    }
+
+    // return true until we reach an expectedToken
+    expectedTokens = Array.isArray(expectedTokens)
+      ? expectedTokens
+      : [expectedTokens];
+    let continueFlag = true;
+    for (const expectedToken of expectedTokens) {
+      if (
+        Array.isArray(expectedToken)
+          ? expectSequenceInternal(expectedToken)
+          : expect(expectedToken)
+      ) {
+        continueFlag = false;
+      }
+    }
+
+    return continueFlag;
+  }
+
+  function getTokensUntilSequence(sequence: string[]) {
+    const tokensUntil: string[] = [];
+    while (untilTokenSequence(sequence)) {
+      tokensUntil.push(currentToken());
+      nextToken();
+    }
+    return tokensUntil;
+  }
+
+  function untilTokenSequence(sequence: string[]) {
+    // return false if there is no next token
+    if (!hasNextToken()) {
+      return false;
+    }
+
+    for (let i = 0; i < sequence.length; i++) {
+      const expectedToken = sequence[i];
+      if (peekToken(i) !== expectedToken) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   function currentToken() {
     return tokens[pos];
+  }
+
+  function peekToken(offset: number = 0) {
+    return tokens[pos + (offset ?? 1)];
   }
 
   function nextToken() {
@@ -129,6 +204,7 @@ function tokenUtils(tokens: string[]) {
     expect,
     enforce,
     getTokensUntil,
+    getTokensUntilSequence,
     untilToken,
     currentToken,
     nextToken,
@@ -137,6 +213,7 @@ function tokenUtils(tokens: string[]) {
     pos: () => pos,
   };
 }
+
 function parseSQL(sql: string) {
   const tokens = (
     sql
@@ -167,15 +244,18 @@ function parseSQL(sql: string) {
 
   while (scanner.hasNextToken()) {
     if (scanner.expectSequence(["CREATE", "TABLE", "IF", "NOT", "EXISTS"])) {
-      const tableName = scanner.currentToken();
-      const table = new Table(tableName);
-      database.addTable(tableName, table);
+      const table = new Table(scanner.currentToken());
+      database.addTable(table);
       scanner.nextToken(); // advance past table name
       if (scanner.expect("(")) {
         scanner.nextToken(); // advance past left paren
-        while (scanner.untilToken(")")) {
-          const [columName, columnType, ...typeModifiers] =
-            scanner.getTokensUntil(",");
+
+        // begin parsing table columns
+        while (scanner.untilToken(";")) {
+          const [columnName, columnType, ...typeModifiers] =
+            scanner.getTokensUntil([",", [")", ";"]]);
+
+          console.log(columnName, columnType, typeModifiers);
           scanner.nextToken(); // advance past comma
 
           const typeScanner = tokenUtils(typeModifiers);
@@ -183,22 +263,25 @@ function parseSQL(sql: string) {
           const notNull =
             typeScanner.includesTokens(["NOT", "NULL"]) || isPrimaryKey;
 
-          const column = new Column(columName, columnType);
+          const column = new Column(columnName, columnType);
           column.modifierPrimaryKey = isPrimaryKey;
           column.modifierNotNull = notNull;
 
           if (typeScanner.expect("REFERENCES")) {
-            const tableNameRef = typeScanner.nextToken(); // advance past REFERENCES & get table name
-            typeScanner.enforce("(");
-            typeScanner.nextToken();
-            const tableColumnRef = typeScanner.nextToken();
+            typeScanner.nextToken(); // advance past references
+            const tableNameRef = typeScanner.currentToken();
+            typeScanner.nextToken(); // advance beyond table name
+            typeScanner.enforce("("); // automatically advances beyond ( after checking current token
+            const tableColumnRef = typeScanner.currentToken();
+            typeScanner.nextToken(); // advance beyond tableColumnRef
             typeScanner.enforce(")");
-
-            column.addReference(tableNameRef, tableColumnRef);
+            column.link(tableNameRef, tableColumnRef);
           }
 
           table.addColumn(column);
         }
+
+        // no need to skip ) or ; because the while loop will do it for us
       }
     }
     scanner.nextToken();
@@ -207,8 +290,18 @@ function parseSQL(sql: string) {
   console.log(JSON.stringify(database, null, 4));
 }
 
-parseSQL(`CREATE TABLE IF NOT EXISTS user_ (
+parseSQL(`
+CREATE TABLE IF NOT EXISTS user_ (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  username TEXT UNIQUE NOT NULL,
-  password TEXT
-);`);
+  username TEXT NOT NULL UNIQUE,
+  password TEXT, 
+  name TEXT
+);
+
+CREATE TABLE IF NOT EXISTS post_ (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  content TEXT,
+  author_id INTEGER REFERENCES user_(id) ON DELETE CASCADE
+);
+`);
