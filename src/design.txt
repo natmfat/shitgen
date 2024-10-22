@@ -5,6 +5,13 @@ CREATE TABLE IF NOT EXISTS user_ (
   name TEXT
 );
 
+CREATE TABLE IF NOT EXISTS post_ (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  content TEXT,
+  author_id INTEGER REFERENCES user_(id) ON DELETE CASCADE
+)
+
 model -> interface
 user model -> implementation of model
 user -> user type, data of user model

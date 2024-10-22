@@ -1,46 +1,142 @@
-/*
-CREATE TABLE IF NOT EXISTS user_ (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  username TEXT NOT NULL UNIQUE,
-  password TEXT, 
-  name TEXT
-);
+const SQL_OPERATORS = new Set(["(", ")", ","]);
 
-model -> interface
-user model -> implementation of model
-user -> user type, data of user model
+type Nullable<T> = T | null;
 
-// in db/generated/user
-export const columns = ["id", "username", "password", "name"]
+class Database {
+  tables: Record<string, Table> = {};
 
-// in server side code
-import * as user from "./db/generated/user"
+  addTable(tableName: string, table: Table): void {
+    if (this.tables[tableName]) throw new Error("Table already exists");
+    this.tables[tableName] = table;
+  }
 
-user.find({ 
-  // if column is included here, we should auto-fetch it
-  columns: ["id", "username"], // user.utils.exclude(["passsword"])
-  where: { username, password }
-})
+  getTable(tableName: string) {
+    const table = this.tables[tableName];
+    if (!table) {
+      throw new Error("Table does not exist.");
+    }
 
-// same args, without limit
-user.findMany()
+    return table;
+  }
+}
 
-user.create({
-  data: { username, password }
-})
+class Table {
+  name: string;
+  columns: Column[] = [];
 
-user.update({
-  data: { username, password },
-  where: { id }
-})
+  primaryKey: Nullable<Column> = null;
 
-// just extend from user class intead
-user.addMethod("coolMethod", () => {
-  const rows: Row<user.Type[]> = sql`SELECT * FROM user_`
-  return rows[0] || null
-})
-*/
+  constructor(name: string) {
+    this.name = name;
+  }
 
+  addColumn(column: Column) {
+    this.columns.push(column);
+  }
+}
+
+// why not just use the table class?
+// because not all tables may be parsed yet!
+type ColumnReference = { tableName: string; columnName: string };
+
+class Column {
+  name: string;
+  type: string;
+
+  modifierPrimaryKey: boolean = false;
+  modifierNotNull: boolean = false;
+
+  references: ColumnReference[] = [];
+
+  constructor(name: string, type: string) {
+    this.name = name;
+    this.type = type;
+  }
+
+  addReference(tableName: string, columnName: string) {
+    this.references.push({ tableName, columnName } satisfies ColumnReference);
+  }
+}
+
+function tokenUtils(tokens: string[]) {
+  let pos = 0;
+
+  function expectSequence(sequence: string[]) {
+    let initialPos = pos;
+    for (const expectedToken of sequence) {
+      if (currentToken() !== expectedToken) {
+        pos = initialPos;
+
+        return false;
+      }
+      nextToken();
+    }
+
+    return true;
+  }
+
+  function expect(expectedToken: string) {
+    return currentToken() === expectedToken;
+  }
+
+  function enforce(expectedToken: string) {
+    if (!expect(expectedToken)) {
+      throw new Error(`Expected ${expectedToken}.`);
+    }
+
+    return true;
+  }
+
+  function getTokensUntil(expectedToken: string) {
+    const tokensUntil: string[] = [];
+    while (untilToken(expectedToken)) {
+      tokensUntil.push(currentToken());
+      nextToken();
+    }
+
+    return tokensUntil;
+  }
+
+  function untilToken(expectedToken: string) {
+    return pos < tokens.length && !expect(expectedToken);
+  }
+
+  function currentToken() {
+    return tokens[pos];
+  }
+
+  function nextToken() {
+    pos += 1;
+    return currentToken();
+  }
+
+  function hasNextToken() {
+    return pos < tokens.length;
+  }
+
+  function includesTokens(expectedTokens: string[]) {
+    for (const expectedToken of expectedTokens) {
+      if (!tokens.includes(expectedToken)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  return {
+    expectSequence,
+    expect,
+    enforce,
+    getTokensUntil,
+    untilToken,
+    currentToken,
+    nextToken,
+    hasNextToken,
+    includesTokens,
+    pos: () => pos,
+  };
+}
 function parseSQL(sql: string) {
   const tokens = (
     sql
@@ -51,7 +147,7 @@ function parseSQL(sql: string) {
         let token = "";
         for (let i = 0; i < trimmed.length; i++) {
           const char = trimmed.charAt(i);
-          if (new Set(["(", ")", ","]).has(char)) {
+          if (SQL_OPERATORS.has(char)) {
             internalTokens.push(token.trim());
             internalTokens.push(char);
             token = "";
@@ -66,65 +162,53 @@ function parseSQL(sql: string) {
       .flat(Infinity) as string[]
   ).filter((word) => word.length > 0);
 
-  console.log(tokens);
+  const database = new Database();
+  const scanner = tokenUtils(tokens);
 
-  let pos = 0;
+  while (scanner.hasNextToken()) {
+    if (scanner.expectSequence(["CREATE", "TABLE", "IF", "NOT", "EXISTS"])) {
+      const tableName = scanner.currentToken();
+      const table = new Table(tableName);
+      database.addTable(tableName, table);
+      scanner.nextToken(); // advance past table name
+      if (scanner.expect("(")) {
+        scanner.nextToken(); // advance past left paren
+        while (scanner.untilToken(")")) {
+          const [columName, columnType, ...typeModifiers] =
+            scanner.getTokensUntil(",");
+          scanner.nextToken(); // advance past comma
 
-  function expectSequence(sequence: string[]) {
-    let initialPos = pos;
-    for (const expectedToken of sequence) {
-      if (currentToken() !== expectedToken) {
-        pos = initialPos;
-        return false;
-      }
+          const typeScanner = tokenUtils(typeModifiers);
+          const isPrimaryKey = typeScanner.includesTokens(["PRIMARY", "KEY"]);
+          const notNull =
+            typeScanner.includesTokens(["NOT", "NULL"]) || isPrimaryKey;
 
-      next();
-    }
+          const column = new Column(columName, columnType);
+          column.modifierPrimaryKey = isPrimaryKey;
+          column.modifierNotNull = notNull;
 
-    return true;
-  }
+          if (typeScanner.expect("REFERENCES")) {
+            const tableNameRef = typeScanner.nextToken(); // advance past REFERENCES & get table name
+            typeScanner.enforce("(");
+            typeScanner.nextToken();
+            const tableColumnRef = typeScanner.nextToken();
+            typeScanner.enforce(")");
 
-  function expect(expectedToken: string) {
-    return currentToken() === expectedToken;
-  }
+            column.addReference(tableNameRef, tableColumnRef);
+          }
 
-  function getTokensUntil(expectedToken: string) {
-    const tokensUntil: string[] = [];
-    while (pos < tokens.length && !expect(expectedToken)) {
-      tokensUntil.push(currentToken());
-      next();
-    }
-
-    return tokensUntil;
-  }
-
-  function currentToken() {
-    return tokens[pos];
-  }
-
-  function next() {
-    pos += 1;
-  }
-
-  while (pos < tokens.length) {
-    if (expectSequence(["CREATE", "TABLE", "IF", "NOT", "EXISTS"])) {
-      const tableName = currentToken();
-      next(); // advance beyond table name
-      console.log(tableName);
-      if (expect("(")) {
-        next(); // advance beyond (
-
-        console.log(getTokensUntil(","));
-        console.log(tokens[pos]);
+          table.addColumn(column);
+        }
       }
     }
-    // console.log(token);
-    next();
+    scanner.nextToken();
   }
+
+  console.log(JSON.stringify(database, null, 4));
 }
 
 parseSQL(`CREATE TABLE IF NOT EXISTS user_ (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  username TEXT UNIQUE,
+  username TEXT UNIQUE NOT NULL,
   password TEXT
 );`);
