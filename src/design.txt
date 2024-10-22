@@ -1,0 +1,34 @@
+CREATE TABLE IF NOT EXISTS user_ (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT NOT NULL UNIQUE,
+  password TEXT, 
+  name TEXT
+);
+
+model -> interface
+user model -> implementation of model
+user -> user type, data of user model
+
+// in db/generated/user
+export const columns = ["id", "username", "password", "name"]
+
+// in server side code
+import {User, TUser} from "./db/generated/user"
+
+User.find({ 
+  // if column is included here, we should auto-fetch it
+  columns: ["id", "username"], // User.utils.exclude(["passsword"])
+  where: { username, password }
+}) as Pick<TUser, "id" | "username"> <- do this automatically
+
+// same args, without limit
+User.findMany()
+
+User.create({
+  data: { username, password }
+})
+
+User.update({
+  data: { username, password },
+  where: { id }
+}) 
