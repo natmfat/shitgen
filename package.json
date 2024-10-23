@@ -1,10 +1,10 @@
 {
   "name": "shitpost",
   "version": "1.0.0",
-  "description": "",
+  "description": "A shit PostgreSQL type generator",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest",
     "build": "tsc ./src/index.ts",
     "start": "tsx ./src/index.ts"
   },

@@ -1,17 +1,29 @@
 # shitpost
 
-Stands for "shit PostgreSQL type generator", but I couldn't miss the opportunity so here we are.
+Stands for "shit PostgreSQL type generator", but I couldn't miss the opportunity on the naming (even if a bit crass) so here we are.
 
-A toy library for people who don't want to use a ORM but do want basic typed models. Made for rapid prototyping - you should probably just use Supabase instead, which uses PostgreSQL and can generate types.
+`shitpost` is a toy library that generates types based on basic DDL (and I mean basic), rather than learning a new schema associated with, say, Prisma. It's not really an ORM, and you will probably have to write raw SQL slapped with type casting for more advanced applications.
+
+Uses [postgres](https://github.com/porsager/postgres) under the hood.
+
+## Installation
+
+WIP
 
 ## Usage
 
 package.json
 
-```
+```json
 {
   "scripts": {
-    "db:generate": "shitpost generate",
+    // migrations are for the weak
+    "db:nuke": "shitpost nuke --force",
+
+    // generate typescript models
+    "db:generate": "shitpost --output .server/database/models"
   }
 }
 ```
+
+@todo adapters that implement a shared interface for different kinds of postgres clients

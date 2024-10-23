@@ -2,6 +2,9 @@ const SQL_OPERATORS = new Set(["(", ")", ",", ";"]);
 
 type Nullable<T> = T | null;
 
+// @todo refactor
+// @todo tests
+
 class Database {
   tables: Record<string, Table> = {};
 
