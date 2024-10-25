@@ -4,6 +4,7 @@ import { Table } from "./database/Table";
 
 import { Lexer } from "./Lexer";
 import { Scanner } from "./Scanner";
+import postgres from "postgres";
 
 // @todo tests
 
@@ -86,3 +87,6 @@ CREATE TABLE IF NOT EXISTS post_ (
   author_id INTEGER REFERENCES user_(id) ON DELETE CASCADE
 );`)
 );
+
+const sql = postgres();
+console.log(sql`WHERE x = 10`);

@@ -14,13 +14,26 @@
 // type Column = typeof columns[number]
 // type Table = typeof tableNames[number]
 
-// @todo joins, don't do 4 now for simplicity
+import postgres from "postgres";
+
+const sql = postgres();
 
 type UserData = {
   id: number;
   username: string;
   password: string;
   random: string | null;
+  avatar_id: number;
+};
+
+type AvatarData = {
+  id: number;
+  src: string;
+  alt: string;
+};
+
+type UserRelationship = {
+  avatar_id: AvatarData;
 };
 
 type NonNullValue<NonNull extends true | false, value> = NonNull extends true
@@ -63,31 +76,67 @@ type IsNotNullable<T> = (T extends null ? true : false) extends false
   ? true
   : false;
 
-export class UserModel {
-  static create(data: Partial<UserData>) {}
+// Relationships will have some of Data's keys, leading to another, different Data type
+type BaseRelationship<Data> = Partial<Record<keyof Data, unknown>>;
 
-  static read(
-    args: Partial<{
-      select: Array<keyof UserData>;
-      where: Partial<{
-        [Key in keyof UserData]: Partial<
-          NonNullable<UserData[Key]> extends string
-            ? WhereOperatorString<IsNotNullable<UserData[Key]>>
-            : NonNullable<UserData[Key]> extends number
-            ? WhereOperatorNumber<IsNotNullable<UserData[Key]>>
-            : NonNullable<UserData[Key]> extends boolean
-            ? WhereOperatorBoolean<IsNotNullable<UserData[Key]>>
-            : unknown
-        >;
+// this "maps" a type of a value of Data to a the corresponding operators
+// prettier-ignore
+type WhereOperatorMap<Value> = NonNullable<Value> extends string
+  ? WhereOperatorString<IsNotNullable<Value>>
+  : NonNullable<Value> extends number
+    ? WhereOperatorNumber<IsNotNullable<Value>>
+    : NonNullable<Value> extends boolean
+      ? WhereOperatorBoolean<IsNotNullable<Value>>
+      : never;
+
+type WhereOperator<
+  Data,
+  Relationship extends BaseRelationship<Data>
+> = Partial<{
+  [Key in keyof Data]: Partial<WhereOperatorMap<Data[Key]>>;
+}> &
+  Partial<{
+    // this feels redundant but I guess we have to reaffirm Key is a keyof Data?
+    // I
+    [Key in keyof Relationship extends infer _ ? keyof Data : never]:
+      | Data[Key]
+      | Partial<{
+          [SubKey in keyof Relationship[Key]]: WhereOperatorMap<
+            Relationship[Key][SubKey]
+          >;
+        }>;
+  }>;
+
+type IncludeOperator<
+  Data,
+  Relationship extends BaseRelationship<Data>
+> = Partial<{
+  [Key in keyof Relationship]:
+    | boolean
+    | Partial<{
+        [SubKey in keyof Relationship[Key]]: boolean;
       }>;
-    }>
+}>;
+
+type DataArgs<Data> = Partial<Data>;
+
+type ReadArgs<Data, Relationship extends BaseRelationship<Data>> = Partial<{
+  select: Array<keyof Data>;
+  where: WhereOperator<Data, Relationship>;
+  include: IncludeOperator<Data, Relationship>;
+}>;
+
+export class UserModel {
+  static create(data: DataArgs<UserData>) {}
+
+  static read(args: ReadArgs<UserData, UserRelationship>) {}
+
+  static update(
+    data: DataArgs<UserData>,
+    where: WhereOperator<UserData, UserRelationship>
   ) {}
 
-  // type Nullable<T> = { [K in keyof T]: T[K] | null };
-
-  static update(data: Partial<UserData>, where: {}) {}
-
-  static delete(where: {}) {}
+  static delete(where: WhereOperator<UserData, UserRelationship>) {}
 }
 
 // https://www.w3schools.com/sql/sql_like.asp
@@ -96,5 +145,11 @@ UserModel.read({
   where: {
     username: "hello",
     random: null,
+    avatar_id: 1,
+  },
+  include: {
+    avatar_id: {
+      id: true,
+    },
   },
 });
