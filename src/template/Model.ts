@@ -1,19 +1,3 @@
-/*
-{
-  where: {
-    username: {
-      equals: value
-    }
-  }
-}
-*/
-
-// export const columns = ["id", "username", "password", "name"] as const
-// export const tableNames = ["users"] as const
-
-// type Column = typeof columns[number]
-// type Table = typeof tableNames[number]
-
 import postgres from "postgres";
 
 const sql = postgres();
@@ -97,7 +81,6 @@ type WhereOperator<
 }> &
   Partial<{
     // this feels redundant but I guess we have to reaffirm Key is a keyof Data?
-    // I
     [Key in keyof Relationship extends infer _ ? keyof Data : never]:
       | Data[Key]
       | Partial<{

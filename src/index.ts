@@ -6,7 +6,7 @@ import { Lexer } from "./Lexer";
 import { Scanner } from "./Scanner";
 import postgres from "postgres";
 
-// @todo tests
+// @todo test (generation, scanner, lexer - basically each component)  with vitest
 
 function createDatabase(sql: string) {
   const tokens = new Lexer(sql).getTokens();
