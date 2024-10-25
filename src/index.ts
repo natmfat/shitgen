@@ -1,4 +1,7 @@
-import { Column, Database, Table } from "./Database";
+import { Database } from "./database";
+import { Column } from "./database/Column";
+import { Table } from "./database/Table";
+
 import { Lexer } from "./Lexer";
 import { Scanner } from "./Scanner";
 
@@ -26,12 +29,9 @@ function createDatabase(sql: string) {
 
           const typeScanner = new Scanner(typeModifiers);
           const isPrimaryKey = typeScanner.includesTokens(["PRIMARY", "KEY"]);
-          const notNull =
-            typeScanner.includesTokens(["NOT", "NULL"]) || isPrimaryKey;
+          const notNull = typeScanner.includesSequence(["NOT", "NULL"]);
 
           const column = new Column(columnName, columnType);
-          column.modifierPrimaryKey = isPrimaryKey;
-          column.modifierNotNull = notNull;
 
           if (typeScanner.expect("REFERENCES")) {
             typeScanner.nextToken(); // advance past references
@@ -43,6 +43,10 @@ function createDatabase(sql: string) {
             typeScanner.enforce(")");
             column.link(tableNameRef, tableColumnRef);
           }
+
+          column.modifierPrimaryKey = isPrimaryKey;
+          column.modifierNotNull =
+            notNull || isPrimaryKey || !!column.reference;
 
           table.addColumn(column);
         }
@@ -57,7 +61,13 @@ function createDatabase(sql: string) {
 }
 
 function generateTypeScript(database: Database) {
-  console.log(JSON.stringify(database, null, 4));
+  console.log(database.getTable("user_").generateColumns());
+  console.log(database.getTable("user_").generateModelData());
+  // console.log(database.getTable("user_").generateModel());
+
+  console.log(database.getTable("post_").generateModelData());
+
+  // console.log(JSON.stringify(database, null, 4));
 }
 
 generateTypeScript(

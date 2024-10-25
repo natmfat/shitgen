@@ -135,4 +135,8 @@ export class Scanner {
     }
     return true;
   }
+
+  includesSequence(expectedTokens: string[]) {
+    return this.tokens.join().includes(expectedTokens.join());
+  }
 }

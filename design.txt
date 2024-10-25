@@ -24,7 +24,7 @@ import {User, TUser} from "./db/generated/user"
 
 User.find({ 
   // if column is included here, we should auto-fetch it
-  columns: ["id", "username"], // User.utils.exclude(["passsword"])
+  select: ["id", "username"], // User.utils.exclude(["passsword"])
   where: { username, password }
 }) as Pick<TUser, "id" | "username"> <- do this automatically
 
