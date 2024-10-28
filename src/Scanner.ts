@@ -6,6 +6,10 @@ export class Scanner {
     this.tokens = token;
   }
 
+  getPos() {
+    return this.pos;
+  }
+
   expectSequence(sequence: string[]) {
     let initialPos = this.pos;
     for (const expectedToken of sequence) {

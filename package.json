@@ -6,7 +6,8 @@
   "scripts": {
     "test": "vitest",
     "build": "tsc ./src/index.ts",
-    "start": "tsx ./src/index.ts"
+    "start": "tsx ./src/index.ts",
+    "start:model": "tsx ./src/DatabaseClient/Model.ts"
   },
   "keywords": [],
   "author": "",
