@@ -1,5 +1,5 @@
 import { Nullable } from "../types";
-import { Column } from "./Column";
+import { MockColumn } from "./MockColumn";
 
 const convertType = {
   TEXT: "string",
@@ -12,17 +12,17 @@ const convertType = {
   BOOLEAN: "boolean",
 };
 
-export class Table {
+export class MockTable {
   name: string;
-  columns: Column[] = [];
+  columns: MockColumn[] = [];
 
-  primaryKey: Nullable<Column> = null;
+  primaryKey: Nullable<MockColumn> = null;
 
   constructor(name: string) {
     this.name = name;
   }
 
-  addColumn(column: Column) {
+  addColumn(column: MockColumn) {
     this.columns.push(column);
   }
 

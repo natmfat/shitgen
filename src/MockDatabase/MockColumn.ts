@@ -3,19 +3,19 @@
 import { Nullable } from "../types";
 
 // because not all tables may be parsed yet!
-export type ColumnReference = {
+export type MockColumnReference = {
   tableName: string;
   columnName: string;
 };
 
-export class Column {
+export class MockColumn {
   name: string;
   type: string;
 
   modifierPrimaryKey: boolean = false;
   modifierNotNull: boolean = false;
 
-  reference: Nullable<ColumnReference> = null;
+  reference: Nullable<MockColumnReference> = null;
 
   constructor(name: string, type: string) {
     this.name = name;
@@ -27,6 +27,6 @@ export class Column {
       throw new Error("Column already linked");
     }
 
-    this.reference = { tableName, columnName } satisfies ColumnReference;
+    this.reference = { tableName, columnName } satisfies MockColumnReference;
   }
 }

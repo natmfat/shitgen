@@ -2,6 +2,8 @@ import postgres from "postgres";
 
 const sql = postgres();
 
+// GENERATED TYPES
+
 type UserData = {
   id: number;
   username: string;
@@ -10,15 +12,27 @@ type UserData = {
   avatar_id: number;
 };
 
+type UserRelationship = {
+  avatar_id: AvatarData;
+};
+
 type AvatarData = {
   id: number;
   src: string;
   alt: string;
 };
 
-type UserRelationship = {
-  avatar_id: AvatarData;
-};
+// UTILITY TYPES
+
+// I have no idea what I'm doing but this appears to work
+// T extends null will result in "boolean" instead of true for some reason (perhaps because T extends unknown | null??)
+// but false works just fine, so we check for that and "force" the "boolean" into a "true"
+type IsNotNullable<T> = (T extends null ? true : false) extends false
+  ? true
+  : false;
+
+// Relationships will have some of Data's keys, leading to another, different Data type
+type BaseRelationship<Data> = Partial<Record<keyof Data, unknown>>;
 
 type NonNullValue<NonNull extends true | false, value> = NonNull extends true
   ? value
@@ -52,16 +66,6 @@ type WhereOperatorBoolean<NonNull extends true | false> =
       neq: NonNullValue<NonNull, boolean>;
     }
   | NonNullValue<NonNull, boolean>;
-
-// I have no idea what I'm doing but this appears to work
-// T extends null will result in "boolean" instead of true for some reason (perhaps because T extends unknown | null??)
-// but false works just fine, so we check for that and "force" the "boolean" into a "true"
-type IsNotNullable<T> = (T extends null ? true : false) extends false
-  ? true
-  : false;
-
-// Relationships will have some of Data's keys, leading to another, different Data type
-type BaseRelationship<Data> = Partial<Record<keyof Data, unknown>>;
 
 // this "maps" a type of a value of Data to a the corresponding operators
 // prettier-ignore
@@ -101,25 +105,68 @@ type IncludeOperator<
       }>;
 }>;
 
-type DataArgs<Data> = Partial<Data>;
+// METHOD ARGUMENTS & RETURN TYPES
 
-type ReadArgs<Data, Relationship extends BaseRelationship<Data>> = Partial<{
+type ModelCreateArgs<Data> = Partial<{
+  data: Partial<Data>;
+}>;
+
+type ModelReadArgs<
+  Data,
+  Relationship extends BaseRelationship<Data>
+> = Partial<{
   select: Array<keyof Data>;
   where: WhereOperator<Data, Relationship>;
   include: IncludeOperator<Data, Relationship>;
 }>;
 
+type ModelUpdateArgs<
+  Data,
+  Relationship extends BaseRelationship<Data>
+> = Partial<{
+  data: Partial<Data>;
+  where: WhereOperator<Data, Relationship>;
+}>;
+
+type ModelDeleteArgs<
+  Data,
+  Relationship extends BaseRelationship<Data>
+> = Partial<{
+  where: WhereOperator<UserData, Relationship>;
+}>;
+
 export class UserModel {
-  static create(data: DataArgs<UserData>) {}
+  static TABLE_NAME = "user_";
 
-  static read(args: ReadArgs<UserData, UserRelationship>) {}
+  static create({ data = {} }: ModelCreateArgs<UserData>) {
+    if (data) {
+      return sql`
+        INSERT INTO ${sql(UserModel.TABLE_NAME)} ${sql(
+        data,
+        Object.keys(data) as Array<keyof typeof data>
+      )}
+      `;
+    }
 
-  static update(
-    data: DataArgs<UserData>,
-    where: WhereOperator<UserData, UserRelationship>
-  ) {}
+    return null;
+  }
 
-  static delete(where: WhereOperator<UserData, UserRelationship>) {}
+  static read({
+    select,
+    where = {},
+    include = {},
+  }: // where,
+  // include
+  ModelReadArgs<UserData, UserRelationship>) {
+    return sql`SELECT 
+      ${select?.map((column) => sql(column)) || "*"} 
+      FROM ${sql(UserModel.TABLE_NAME)}
+    `;
+  }
+
+  static update(args: ModelUpdateArgs<UserData, UserRelationship>) {}
+
+  static delete(args: ModelDeleteArgs<UserData, UserRelationship>) {}
 }
 
 // https://www.w3schools.com/sql/sql_like.asp

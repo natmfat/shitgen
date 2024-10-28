@@ -1,21 +1,18 @@
-import { Database } from "./database";
-import { Column } from "./database/Column";
-import { Table } from "./database/Table";
+import { MockDatabase, MockColumn, MockTable } from "./MockDatabase";
 
 import { Lexer } from "./Lexer";
 import { Scanner } from "./Scanner";
-import postgres from "postgres";
 
 // @todo test (generation, scanner, lexer - basically each component)  with vitest
 
 function createDatabase(sql: string) {
   const tokens = new Lexer(sql).getTokens();
   const scanner = new Scanner(tokens);
-  const database = new Database();
+  const database = new MockDatabase();
 
   while (scanner.hasNextToken()) {
     if (scanner.expectSequence(["CREATE", "TABLE", "IF", "NOT", "EXISTS"])) {
-      const table = new Table(scanner.currentToken());
+      const table = new MockTable(scanner.currentToken());
       database.addTable(table);
       scanner.nextToken(); // advance past table name
       if (scanner.expect("(")) {
@@ -32,7 +29,7 @@ function createDatabase(sql: string) {
           const isPrimaryKey = typeScanner.includesTokens(["PRIMARY", "KEY"]);
           const notNull = typeScanner.includesSequence(["NOT", "NULL"]);
 
-          const column = new Column(columnName, columnType);
+          const column = new MockColumn(columnName, columnType);
 
           if (typeScanner.expect("REFERENCES")) {
             typeScanner.nextToken(); // advance past references
@@ -61,7 +58,7 @@ function createDatabase(sql: string) {
   return database;
 }
 
-function generateTypeScript(database: Database) {
+function generateTypeScript(database: MockDatabase) {
   console.log(database.getTable("user_").generateColumns());
   console.log(database.getTable("user_").generateModelData());
   // console.log(database.getTable("user_").generateModel());
@@ -87,6 +84,3 @@ CREATE TABLE IF NOT EXISTS post_ (
   author_id INTEGER REFERENCES user_(id) ON DELETE CASCADE
 );`)
 );
-
-const sql = postgres();
-console.log(sql`WHERE x = 10`);
