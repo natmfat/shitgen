@@ -1,10 +1,13 @@
 # shitpost
 
-Stands for "shit PostgreSQL type generator", but I couldn't miss the opportunity on the naming (even if a bit crass) so here we are.
+Stands for "shit PostgreSQL type generator". I simply couldn't miss the opportunity on the naming (even if a bit crass), so here we are. The primary motivation of this project is to
 
-`shitpost` is a toy library that generates types based on basic DDL (and I mean basic), rather than learning a new schema associated with, say, Prisma. It's not really a complete ORM, and you will probably have to write raw SQL slapped with type casting for more advanced applications.
+- enable rapid prototyping on simple web applications
+- allow you to use Prisma-esque method without learning yet another intermediary schema langauge.
 
-Uses [postgres](https://github.com/porsager/postgres) under the hood.
+`shitpost` is a toy library that generates both types and models based on basic DDL. It's basically a bad yet (barely) "functional enough" ORM with support for basic CRUD operations. You will likely have to write raw SQL slapped with type casting for more advanced applications or basic optimizations.
+
+Currently uses [postgres](https://github.com/porsager/postgres) under the hood.
 
 NOTE: I did not look at how other libraries achieve type generation, so the approach may differ substantially here. All I can say is this TypeScript is cursed and shockingly still works.
 

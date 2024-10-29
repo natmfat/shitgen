@@ -14,6 +14,7 @@ export class MockColumn {
 
   modifierPrimaryKey: boolean = false;
   modifierNotNull: boolean = false;
+  modifierDefault: boolean = false;
 
   reference: Nullable<MockColumnReference> = null;
 
