@@ -4,7 +4,7 @@ import { nukeDatabase } from "./client/nuke";
 import { Lexer } from "./language/Lexer";
 import { Scanner } from "./language/Scanner";
 
-import { program } from "commander";
+import { Command } from "commander";
 import promptly from "promptly";
 import { name, description, version } from "../package.json";
 
@@ -13,6 +13,8 @@ import { sql } from "./client/sql";
 
 // @todo testing with vitest
 // @todo error handling
+
+const program = new Command();
 
 program.name(name).description(description).version(version);
 
@@ -37,7 +39,7 @@ program
 program
   .command("seed")
   .description("push schema to database")
-  .argument("<input-schema>", "input sql schema", "./database/schema.sql")
+  .argument("<input-schema>", "input sql schema")
   .action(async (inputSchema: string) => {
     const rawSql = await fs.readFile(inputSchema, "utf-8");
     const database = await createDatabase(rawSql);
@@ -51,11 +53,10 @@ program
 program
   .command("generate")
   .description("generate types and utility methods given an sql schema")
-  .argument("<input-schema>", "input sql schema", "./database/schema.sql")
+  .argument("<input-schema>", "input sql schema")
   .option(
     "--out-file <output-file>",
-    "where to put the generated database client",
-    "./database/client.ts"
+    "where to put the generated database client"
   )
   .action(async (inputSchema: string, options) => {
     const rawSql = await fs.readFile(inputSchema, "utf-8");
