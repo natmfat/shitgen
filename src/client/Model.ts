@@ -181,17 +181,26 @@ export class Model<
       ${sql(data as any, Object.keys(data))}`;
   }
 
-  // include = {},
+  async find<T extends keyof ModelData>(args: {
+    select?: Array<T>;
+    where?: WhereOperator<ModelData, ModelRelationship>;
+    include?: IncludeOperator<ModelData, ModelRelationship>;
+  }): Promise<Nullable<Pick<ModelData, T>>> {
+    const data = await this.findMany({ ...args, limit: 1 });
+    return data.length > 0 ? data[0] : null;
+  }
 
-  async find<T extends keyof ModelData>({
+  async findMany<T extends keyof ModelData>({
     select = [],
     where = {},
+    limit,
   }: // include = {},
   {
     select?: Array<T>;
     where?: WhereOperator<ModelData, ModelRelationship>;
     include?: IncludeOperator<ModelData, ModelRelationship>;
-  }): Promise<Nullable<Pick<ModelData, T>>> {
+    limit?: number;
+  }): Promise<Array<Pick<ModelData, T>>> {
     // const includeColumns = Object.entries(include).map(([key, value]) => {
     //   if(typeof value === "boolean") {
     //     return
@@ -200,13 +209,11 @@ export class Model<
     // });
     // @todo columns also need to modify left join
 
-    const result = await sql`
+    return sql<Array<Pick<ModelData, T>>>`
       SELECT ${this.generateSelect(select)} FROM ${sql(this.tableName)}
       ${sql.unsafe(this.generateWhere(where))}
-      LIMIT 1
+      ${limit ? sql`LIMIT ${limit}` : sql``}
     `;
-    // @todo find many
-    return result.length > 0 ? (result[0] as any) : null;
   }
 
   async update<T extends keyof ModelData>({
