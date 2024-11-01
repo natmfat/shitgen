@@ -1,27 +1,27 @@
 {
   "name": "shitgen",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A shit PostgreSQL type generator",
-  "main": "./dist/src/index.js",
+  "main": "./dist/index.js",
   "type": "module",
   "files": [
     "dist"
   ],
   "bin": {
-    "shitgen": "./dist/src/index.js"
+    "shitgen": "./dist/index.js"
   },
   "exports": {
     ".": {
-      "types": "./dist/src/index.d.ts",
-      "default": "./dist/src/index.js"
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     },
     "./client/*": {
-      "types": "./dist/src/client/*.d.ts",
-      "default": "./dist/src/client/*.js"
+      "types": "./dist/client/*.d.ts",
+      "default": "./dist/client/*.js"
     },
     "./MockDatabase/*": {
-      "types": "./dist/src/MockDatabase/*.d.ts",
-      "default": "./dist/src/MockDatabase/*.js"
+      "types": "./dist/MockDatabase/*.d.ts",
+      "default": "./dist/MockDatabase/*.js"
     }
   },
   "scripts": {
