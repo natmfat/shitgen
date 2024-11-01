@@ -19,7 +19,7 @@ type AvatarData = {
   src: string;
   alt: string | null;
 };
-type AvatarRelationship = {};
+// type AvatarRelationship = {};
 
 // UTILITY TYPES
 
@@ -133,9 +133,9 @@ class Model<
   constructor(private tableName: string) {}
 
   // @todo this should not exist, use mock db instead
-  private getTableFromId(key: string) {
-    return key.endsWith("id") ? key.substring(0, key.length - 2) : key;
-  }
+  // private getTableFromId(key: string) {
+  //   return key.endsWith("id") ? key.substring(0, key.length - 2) : key;
+  // }
 
   private generateWhere<
     WhereData extends Record<string, unknown>,
@@ -204,8 +204,8 @@ class Model<
   async find<T extends keyof ModelData>({
     select = [],
     where = {},
-    include = {},
-  }: {
+  }: // include = {},
+  {
     select?: Array<T>;
     where?: WhereOperator<ModelData, ModelRelationship>;
     include?: IncludeOperator<ModelData, ModelRelationship>;

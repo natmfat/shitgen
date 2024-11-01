@@ -3,11 +3,26 @@
   "version": "1.0.0",
   "description": "A shit PostgreSQL type generator",
   "main": "index.js",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./database/*": {
+      "types": "./dist/database/*.d.ts",
+      "default": "./dist/database/*.js"
+    }
+  },
   "scripts": {
     "test": "vitest",
-    "build": "tsc ./src/index.ts",
+    "build": "tsc -p .",
     "start": "tsx ./src/index.ts",
-    "start:model": "tsx ./src/DatabaseClient/Model.ts"
+    "start:model": "tsx ./src/database/Model.ts",
+    "prebuild": "rimraf dist/"
   },
   "keywords": [],
   "author": "",
@@ -21,6 +36,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.7.8",
+    "rimraf": "^6.0.1",
     "vitest": "^2.1.3"
   }
 }
