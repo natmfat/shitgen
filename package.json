@@ -1,6 +1,6 @@
 {
   "name": "shitgen",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "A shit PostgreSQL type generator",
   "main": "./dist/index.js",
   "type": "module",
