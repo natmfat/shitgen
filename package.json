@@ -1,5 +1,5 @@
 {
-  "name": "shitpost",
+  "name": "shitpostres",
   "version": "0.0.0",
   "description": "A shit PostgreSQL type generator",
   "main": "./dist/index.js",
