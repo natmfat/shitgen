@@ -1,4 +1,4 @@
-import { sql } from "./client";
+import { sql } from "./sql";
 
 async function nukeDatabase() {
   await sql`DROP SCHEMA public CASCADE`;

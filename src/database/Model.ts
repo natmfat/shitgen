@@ -1,6 +1,4 @@
-import assert from "assert";
-import { MockDatabase, MockTable } from "../MockDatabase";
-import { sql } from "./client";
+import { sql } from "./sql";
 
 // "GENERATED" TYPES
 
@@ -35,7 +33,7 @@ type IsNotNullable<T> = (T extends null ? true : false) extends false
 type Nullable<T> = T | null;
 
 type OneOf<T> = {
-  [Key in keyof T]: Pick<T, Key>;
+  [K in keyof T]: Pick<T, K>;
 }[keyof T];
 
 // Relationships will have some of Data's keys, leading to another, different Data type
@@ -146,7 +144,7 @@ class Model<
     where: WhereOperator<WhereData, WhereRelationship>,
     parentTable: string = this.tableName
   ): string {
-    // @todo very bad using unsafe, fix that
+    // @todo very bad using unsafe (idk sql injections ok), fix that
     return `WHERE ${Object.entries(where)
       .map(([key, operators]) => {
         const selector = `${parentTable}.${key}`;
@@ -159,7 +157,6 @@ class Model<
           // @todo check if key is a relationship w/ mock db (if it is, then )
           // return this.generateWhere(operator as any, this.getTableFromId(key));
           // otherwise, it's an operator
-
           const [operator, targetValue] = Object.entries(operators)[0];
           switch (operator) {
             case "eq":
@@ -187,7 +184,7 @@ class Model<
           }
         }
 
-        return `${parentTable}.${key} = '${operators}'`;
+        return `${selector} = '${operators}'`;
       })
       .join(" AND ")}`;
   }
@@ -278,7 +275,9 @@ async function main() {
 
   const found = await user.find({
     where: {
-      username: "string",
+      username: {
+        contains: "ing",
+      },
       name: null,
     },
   });

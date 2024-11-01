@@ -8,6 +8,14 @@ export type MockColumnReference = {
   columnName: string;
 };
 
+const COPY_KEYS: Array<keyof MockColumn> = [
+  "type",
+  "modifierPrimaryKey",
+  "modifierNotNull",
+  "modifierDefault",
+  "reference",
+];
+
 export class MockColumn {
   name: string;
   type: string;
@@ -29,5 +37,11 @@ export class MockColumn {
     }
 
     this.reference = { tableName, columnName } satisfies MockColumnReference;
+  }
+
+  toString() {
+    return JSON.stringify(
+      COPY_KEYS.reduce((acc, key) => ({ ...acc, [key]: this[key] }), {})
+    );
   }
 }

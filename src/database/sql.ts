@@ -9,14 +9,14 @@ let sql: PostgresClient;
 declare global {
   // we need to use var for global magic
   // eslint-disable-next-line
-  var client: PostgresClient;
+  var __sql: PostgresClient;
 }
 
 if (process.env.NODE_ENV === "production") {
   sql = postgres();
 } else {
-  global.client = global.client || postgres();
-  sql = global.client;
+  global.__sql = global.__sql || postgres();
+  sql = global.__sql;
 }
 
 export { sql };
