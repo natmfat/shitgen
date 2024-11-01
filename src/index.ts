@@ -86,7 +86,7 @@ async function main() {
     username TEXT NOT NULL UNIQUE,
     password TEXT NOT NULL, 
     name TEXT DEFAULT 'unnamed',
-    avatar_id INTEGER REFERENCES user_(id) ON DELETE CASCADE
+    avatar_id INTEGER REFERENCES avatar_(id) ON DELETE CASCADE
   );
   
   CREATE TABLE IF NOT EXISTS avatar_ (
