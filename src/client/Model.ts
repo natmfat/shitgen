@@ -8,6 +8,8 @@ type NonNullValue<NonNull extends true | false, value> = NonNull extends true
   ? value
   : value | null;
 
+// @todo order desc/asc
+
 type WhereOperatorString<NonNull extends true | false> =
   | OneOf<{
       eq: NonNullValue<NonNull, string>;
@@ -102,6 +104,22 @@ export class Model<
   //   return key.endsWith("id") ? key.substring(0, key.length - 2) : key;
   // }
 
+  private createIdentifier(
+    column: string,
+    parentTable: string = this.tableName
+  ) {
+    return `${parentTable}.${column}`;
+  }
+
+  private generateSelect(select: Array<keyof ModelData>, returning = false) {
+    const columns =
+      select.length > 0
+        ? select.map((column) => sql(this.createIdentifier(String(column))))
+        : sql`*`;
+
+    return sql`${returning ? sql`RETURNING ` : sql``}${columns}`;
+  }
+
   private generateWhere<
     WhereData extends Record<string, unknown>,
     WhereRelationship extends BaseRelationship<WhereData>
@@ -112,8 +130,7 @@ export class Model<
     // @todo very bad using unsafe (idk sql injections ok), fix that
     return `WHERE ${Object.entries(where)
       .map(([key, operators]) => {
-        const selector = `${parentTable}.${key}`;
-
+        const selector = this.createIdentifier(key, parentTable);
         if (typeof operators === "undefined") {
           return;
         } else if (operators === null) {
@@ -175,11 +192,6 @@ export class Model<
     where?: WhereOperator<ModelData, ModelRelationship>;
     include?: IncludeOperator<ModelData, ModelRelationship>;
   }): Promise<Nullable<Pick<ModelData, T>>> {
-    const columns =
-      select.length > 0
-        ? select.map((column) => sql(`${this.tableName}.${String(column)}`))
-        : sql.unsafe("*");
-
     // const includeColumns = Object.entries(include).map(([key, value]) => {
     //   if(typeof value === "boolean") {
     //     return
@@ -189,22 +201,27 @@ export class Model<
     // @todo columns also need to modify left join
 
     const result = await sql`
-      SELECT ${columns} FROM ${sql(this.tableName)}
+      SELECT ${this.generateSelect(select)} FROM ${sql(this.tableName)}
       ${sql.unsafe(this.generateWhere(where))}
+      LIMIT 1
     `;
+    // @todo find many
     return result.length > 0 ? (result[0] as any) : null;
   }
 
-  async update({
+  async update<T extends keyof ModelData>({
+    select = [],
     data,
     where,
   }: {
+    select?: Array<T>;
     data: Partial<ModelData>;
     where: WhereOperator<ModelData, ModelRelationship>;
   }) {
     return sql`
       UPDATE ${sql(this.tableName)} SET ${sql(data as any, Object.keys(data))}
-      ${sql.unsafe(this.generateWhere(where))} 
+      ${sql.unsafe(this.generateWhere(where))}
+      ${this.generateSelect(select, true)}
     `;
   }
 
