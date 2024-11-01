@@ -1,3 +1,4 @@
+import assert from "assert";
 import { Nullable } from "../types";
 import { MockColumn } from "./MockColumn";
 
@@ -25,11 +26,15 @@ export class MockTable {
   }
 
   addColumn(column: MockColumn) {
+    assert(
+      this.getColumn(column.name) === null,
+      "cannot create columns with the same identifier"
+    );
     this.columns.push(column);
   }
 
   getColumn(columnName: string) {
-    return this.columns.find((column) => column.name === columnName);
+    return this.columns.find((column) => column.name === columnName) || null;
   }
 
   toString() {
@@ -60,9 +65,16 @@ export class MockTable {
   }
 
   private convertType(type: string) {
-    return type in convertType
-      ? convertType[type as keyof typeof convertType]
-      : convertType["TEXT"];
+    const isArray = type.endsWith("[]");
+    if (isArray) {
+      type = type.substring(0, type.length - 2);
+    }
+
+    const convertedType =
+      type in convertType
+        ? convertType[type.toUpperCase() as keyof typeof convertType]
+        : convertType["TEXT"];
+    return isArray ? `Array<${convertedType}>` : convertedType;
   }
 
   // all methods prefixed by generate mean "outputs valid Typescript", unless private

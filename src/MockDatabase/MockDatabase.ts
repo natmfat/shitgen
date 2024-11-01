@@ -55,7 +55,7 @@ export class MockDatabase {
       .map((table) => {
         return `"${table.name}":${table.toString()}`;
       })
-      .join(",")}`;
+      .join(",")}}`;
   }
 
   generateMockDatabase() {
@@ -64,9 +64,9 @@ export class MockDatabase {
 
   generateImports() {
     return [
-      `import { MockDatabase } from "shitpost/MockDatabase";`,
-      `import { Model } from "shitpost/client/Model";`,
-      `export { sql } from "shitpost/client/sql";`,
+      `import { MockDatabase } from "shitgen/MockDatabase";`,
+      `import { Model } from "shitgen/client/Model";`,
+      `export { sql } from "shitgen/client/sql";`,
     ].join("\n");
   }
 

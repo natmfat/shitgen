@@ -91,6 +91,20 @@ async function createDatabase(rawSql: string) {
           const [columnName, columnType, ...typeModifiers] =
             scanner.getTokensUntil([",", [")", ";"]]);
 
+          // @todo investigate more deeply (basically just keep skipping if no column name)
+          // we should only hit this if something went wrong tho
+          if (!columnName || !columnType) {
+            scanner.nextToken();
+            continue;
+          }
+
+          // @todo look into parsing balanced paren?
+          if (columnName === "UNIQUE") {
+            scanner.getTokensUntil([")"]);
+            scanner.nextToken(); // advance past )
+            continue;
+          }
+
           scanner.nextToken(); // advance past comma
 
           const typeScanner = new Scanner(typeModifiers);
