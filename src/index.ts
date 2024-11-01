@@ -6,40 +6,64 @@ import { Scanner } from "./language/Scanner";
 
 import { program } from "commander";
 import promptly from "promptly";
-// import { name, description, version } from "../package.json" with { type: "json" };
+import { name, description, version } from "../package.json";
 
-program.name("shitpost").description("decription").version("ok");
+import fs from "fs/promises";
+import { sql } from "./client/sql";
+
+// @todo testing with vitest
+// @todo error handling
+
+program.name(name).description(description).version(version);
 
 program
   .command("nuke")
   .description(
-    "Empties the current database, including all tables and data. Migrations are for the weak."
+    "empties the current database because migrations are for the weak"
   )
-  .option(
-    "-f",
-    "--force",
-    "Force nuke your database. Do NOT do this, unless you really know what you're doing."
-  )
+  .option("-f", "--force", "skip confirmation prompt - do NOT do this")
   .action(async (options) => {
     if (!options.force) {
-      if (
-        !(await promptly.confirm(
-          "Are you sure you want to nuke your database? "
-        ))
-      ) {
-        console.log("I promise I won't. Probably.");
+      if (!(await promptly.confirm("are you really sure? "))) {
         return;
       }
     }
 
-    console.log("Nuking database...");
+    console.log("nuked database");
     await nukeDatabase();
     process.exit(0);
   });
 
-program.parseAsync();
+program
+  .command("seed")
+  .description("push schema to database")
+  .argument("<input-schema>")
+  .action(async (inputSchema: string = "schema.sql") => {
+    const rawSql = await fs.readFile(inputSchema, "utf-8");
+    const database = await createDatabase(rawSql);
+    for (const table of Object.values(database.tables)) {
+      if (table.rawSql) {
+        await sql.unsafe(table.rawSql);
+      }
+    }
+  });
 
-// @todo test (generation, scanner, lexer - basically each component)  with vitest
+program
+  .command("generate")
+  .description("generate types and utility methods given an sql schema")
+  .argument("<input-schema>")
+  .option(
+    "-o",
+    "--out-file <output-file>",
+    "where to put the generated database client"
+  )
+  .action(async (inputSchema: string = "schema.sql", options) => {
+    const rawSql = await fs.readFile(inputSchema, "utf-8");
+    const database = await createDatabase(rawSql);
+    await fs.writeFile(options.outFile || "./database.ts", database.generate());
+  });
+
+program.parseAsync();
 
 /**
  * Seed real & mock database from raw SQL
@@ -107,30 +131,3 @@ async function createDatabase(rawSql: string) {
 
   return database;
 }
-
-// function generateTypeScript(database: MockDatabase) {
-//   console.log(database.generate());
-// }
-
-// async function main() {
-//   generateTypeScript(
-//     await createDatabase(`
-//   CREATE TABLE IF NOT EXISTS user_ (
-//     id INTEGER PRIMARY KEY,
-//     username TEXT NOT NULL UNIQUE,
-//     password TEXT NOT NULL,
-//     name TEXT DEFAULT 'unnamed',
-//     avatar_id INTEGER REFERENCES avatar_(id) ON DELETE CASCADE
-//   );
-
-//   CREATE TABLE IF NOT EXISTS avatar_ (
-//     id INTEGER PRIMARY KEY,
-//     src TEXT NOT NULL,
-//     alt TEXT
-//   );`)
-//   );
-
-//   process.exit(0);
-// }
-
-// main();

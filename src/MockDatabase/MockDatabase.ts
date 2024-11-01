@@ -66,6 +66,7 @@ export class MockDatabase {
     return [
       `import { MockDatabase } from "shitpost/MockDatabase";`,
       `import { Model } from "shitpost/client/Model";`,
+      `export { sql } from "shitpost/client/sql";`,
     ].join("\n");
   }
 

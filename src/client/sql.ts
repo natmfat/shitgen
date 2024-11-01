@@ -13,7 +13,9 @@ declare global {
 }
 
 if (process.env.NODE_ENV === "production") {
-  sql = postgres();
+  sql = postgres({
+    onnotice: () => {},
+  });
 } else {
   global.__sql = global.__sql || postgres();
   sql = global.__sql;

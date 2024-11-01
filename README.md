@@ -19,8 +19,25 @@ NOTE: I did not look at how other libraries achieve type generation, so the appr
 # empties the current database and all tables, because migrations are for the weak
 shitpost nuke --force
 
-# Generate types & utility methods from a schema file including basic DDL
-shitpost generate schema.sql --output .server/database
+# Generate types & utility methods from a schema file
+shitpost generate ./schema.sql -o "./dist/database.ts"
+```
+
+```sql
+-- schema.sql
+CREATE TABLE IF NOT EXISTS user_ (
+  id INTEGER PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE,
+  password TEXT NOT NULL,
+  name TEXT DEFAULT 'unnamed',
+  avatar_id INTEGER REFERENCES avatar_(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS avatar_ (
+  id INTEGER PRIMARY KEY,
+  src TEXT NOT NULL,
+  alt TEXT
+);
 ```
 
 The full list of command documentation can be found with `shitpost help`.

@@ -1,0 +1,13 @@
+CREATE TABLE IF NOT EXISTS user_ (
+  id INTEGER PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE,
+  password TEXT NOT NULL,
+  name TEXT DEFAULT 'unnamed',
+  avatar_id INTEGER REFERENCES avatar_(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS avatar_ (
+  id INTEGER PRIMARY KEY,
+  src TEXT NOT NULL,
+  alt TEXT
+);
