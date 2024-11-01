@@ -21,7 +21,7 @@ program
   .description(
     "empties the current database because migrations are for the weak"
   )
-  .option("-f", "--force", "skip confirmation prompt - do NOT do this")
+  .option("--force", "skip confirmation prompt - do NOT do this")
   .action(async (options) => {
     if (!options.force) {
       if (!(await promptly.confirm("are you really sure? "))) {
@@ -53,7 +53,6 @@ program
   .description("generate types and utility methods given an sql schema")
   .argument("<input-schema>")
   .option(
-    "-o",
     "--out-file <output-file>",
     "where to put the generated database client"
   )
