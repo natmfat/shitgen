@@ -48,6 +48,7 @@ program
         await sql.unsafe(table.rawSql);
       }
     }
+    process.exit(0);
   });
 
 program
