@@ -26,7 +26,8 @@
     "build": "tsc -p .",
     "start": "tsx ./src/index.ts",
     "start:model": "tsx ./src/database/Model.ts",
-    "prebuild": "rimraf dist/"
+    "prebuild": "rimraf dist/",
+    "prepublishOnly": "pnpm run build"
   },
   "keywords": [],
   "author": "",
