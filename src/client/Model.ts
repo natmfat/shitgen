@@ -160,7 +160,7 @@ export class Model<
               sql`${sql(this.createIdentifier(String(column), parentTable))} ${
                 referenceColumnName
                   ? sql`AS ${sql(
-                      `__${referenceColumnName}_${String(column)}`
+                      `__${referenceColumnName}__${String(column)}`
                     )} ${i !== select.length - 1 ? sql`,` : sql``}`
                   : sql``
               }`
@@ -327,6 +327,29 @@ export class Model<
     return data.length > 0 ? data[0] : null;
   }
 
+  private formatRow(rowSource: Record<string, unknown>) {
+    const row = { ...rowSource };
+    for (const key of Object.keys(row)) {
+      // if starts with __, like __palette_id__thumbnail_colors
+      // we should remove it & add all keys to palette_id
+      if (key.startsWith("__")) {
+        const cachedValue = row[key];
+        delete row[key];
+        const [referenceColumnName, subKey] = key
+          .split("__")
+          .map((row) => row.trim())
+          .filter((row) => row.length > 0) as [keyof typeof row, string];
+        row[referenceColumnName] = {
+          ...(typeof row[referenceColumnName] === "object"
+            ? row[referenceColumnName]
+            : {}),
+          [subKey]: cachedValue,
+        };
+      }
+    }
+    return row;
+  }
+
   async findMany<
     SelectKey extends keyof ModelData,
     ResolvedIncludeOperator extends IncludeOperator<
@@ -348,16 +371,7 @@ export class Model<
       this.generateInclude(include);
     // @todo generateSelect should accept and object instead to keep default values
 
-    return sql<
-      Array<
-        Pick<ModelData, SelectKey> &
-          IncludeOperatorResult<
-            ModelData,
-            ModelRelationship,
-            ResolvedIncludeOperator
-          >
-      >
-    >`
+    const rows = await sql`
       SELECT ${this.generateSelect({
         select,
         hasIncludeFragment: includeSelectFragment.length > 0,
@@ -368,6 +382,16 @@ export class Model<
       ${sql.unsafe(this.generateWhere(where))}
       ${limit ? sql`LIMIT ${limit}` : sql``}
     `;
+
+    return rows.map(
+      (row) =>
+        this.formatRow(row) as Pick<ModelData, SelectKey> &
+          IncludeOperatorResult<
+            ModelData,
+            ModelRelationship,
+            ResolvedIncludeOperator
+          >
+    );
   }
 
   async update<T extends keyof ModelData>({
