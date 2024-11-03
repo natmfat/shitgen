@@ -1,5 +1,6 @@
 import { sql } from "./sql";
 import { OneOf, Nullable, IsNotNullable } from "../types";
+import { MockDatabase } from "../MockDatabase";
 
 // Relationships will have some of Data's keys, leading to another, different Data type
 type BaseRelationship<Data> = Partial<Record<keyof Data, unknown>>;
@@ -97,7 +98,7 @@ export class Model<
   ModelOptional extends keyof ModelData,
   ModelRelationship extends BaseRelationship<ModelData>
 > {
-  constructor(private tableName: string) {}
+  constructor(private tableName: string, private database: MockDatabase) {}
 
   // @todo this should not exist, use mock db instead
   // private getTableFromId(key: string) {
