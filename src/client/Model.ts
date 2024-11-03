@@ -4,8 +4,9 @@ import { MockColumn, MockDatabase } from "../MockDatabase";
 import assert from "assert";
 
 // Relationships will have some of Data's keys, leading to another, different Data type
-type BaseRelationship<Data> = Partial<
-  Record<keyof Data, Record<string, unknown>>
+type BaseData = Record<string, unknown>;
+type BaseRelationship<Data extends BaseData> = Partial<
+  Record<keyof Data, BaseData>
 >;
 
 type SqlFragment = ReturnType<typeof sql>;
@@ -56,17 +57,17 @@ type WhereOperatorMap<Value> = NonNullable<Value> extends string
       : never;
 
 type WhereOperator<
-  BaseData,
-  Relationship extends BaseRelationship<BaseData>
+  Data extends BaseData,
+  Relationship extends BaseRelationship<Data>
 > = Partial<{
-  [Key in keyof BaseData]: Partial<WhereOperatorMap<BaseData[Key]>>;
+  [Key in keyof Data]: Partial<WhereOperatorMap<Data[Key]>>;
 }> &
   Partial<{
-    [Key in keyof BaseData]:
-      | Partial<WhereOperatorMap<BaseData[Key]>>
+    [Key in keyof Data]:
+      | Partial<WhereOperatorMap<Data[Key]>>
       | (Key extends keyof Relationship
           ?
-              | BaseData[Key]
+              | Data[Key]
               | Partial<{
                   [SubKey in keyof Relationship[Key]]: WhereOperatorMap<
                     Relationship[Key][SubKey]
@@ -78,7 +79,7 @@ type WhereOperator<
 // @todo more than 1 relationship deep -> recursive types (use WhereOperator<value, value> if extends?)
 
 type IncludeOperator<
-  Data,
+  Data extends BaseData,
   Relationship extends BaseRelationship<Data>
 > = Partial<{
   [Key in keyof Relationship]:
@@ -88,23 +89,21 @@ type IncludeOperator<
       }>;
 }>;
 
+// prettier-ignore
 type IncludeOperatorResult<
-  Data,
+  Data extends BaseData,
   Relationship extends BaseRelationship<Data>,
-  RelationshipKeys extends keyof Relationship
+  Include extends IncludeOperator<Data, Relationship>
 > = {
-  [Key in RelationshipKeys]: IncludeOperator<
-    Data,
-    Relationship
-  >[Key] extends boolean
-    ? Pick<Relationship, Key>
-    : IncludeOperator<Data, Relationship>[Key] extends Partial<infer Sub>
-    ? Pick<Relationship, Key> & {
-        [SubKey in keyof Sub]: SubKey extends keyof Relationship[Key]
-          ? Pick<Relationship[Key], SubKey>
-          : never;
-      }
-    : never;
+  [Key in keyof Include]: Include[Key] extends boolean
+    ? Key extends keyof Relationship
+      ? Pick<Relationship, Key>
+      : never
+    : Include[Key] extends Partial<Record<infer SubKey, boolean>>
+      ? Key extends keyof Relationship
+        ? Pick<Relationship[Key], Extract<keyof Relationship[Key], SubKey>>
+        : never
+      : never;
 };
 
 // METHOD ARGUMENTS & RETURN TYPES
@@ -270,45 +269,40 @@ export class Model<
     select?: Array<T>;
     where?: WhereOperator<ModelData, ModelRelationship>;
     include?: IncludeOperator<ModelData, ModelRelationship>;
-  }): Promise<Nullable<Pick<ModelData, T>>> {
+  }) {
     const data = await this.findMany({ ...args, limit: 1 });
     return data.length > 0 ? data[0] : null;
   }
 
   async findMany<
     SelectKey extends keyof ModelData,
-    IncludeKey extends keyof ModelRelationship
+    ResolvedIncludeOperator extends IncludeOperator<
+      ModelData,
+      ModelRelationship
+    >
   >({
     select = [],
     where = {},
-    include = {},
+    include = {} as ResolvedIncludeOperator,
     limit,
   }: {
     select?: Array<SelectKey>;
     where?: WhereOperator<ModelData, ModelRelationship>;
-    include?: IncludeOperator<ModelData, ModelRelationship>;
-    /*
-    avatar_id: true
-    avatar_id: {
-      name: true
-    }
-    Pick<ModelRelationship, IncludeKey>
-
-    what I want:
-    Pick<ModelData, SelectKey> & Pick<ModelRelationship, RelationshipKey>[subkeys]
-
-  {
-    
-  }
-    
-
-    */
+    include?: ResolvedIncludeOperator;
     limit?: number;
-  }): Promise<Array<Pick<ModelData, SelectKey>>> {
-    type test = Pick<ModelRelationship, IncludeKey>;
+  }) {
     const { joins, select: includeSelect } = this.generateInclude(include);
 
-    return sql<Array<Pick<ModelData, SelectKey>>>`
+    return sql<
+      Array<
+        Pick<ModelData, SelectKey> &
+          IncludeOperatorResult<
+            ModelData,
+            ModelRelationship,
+            ResolvedIncludeOperator
+          >
+      >
+    >`
       SELECT ${this.generateSelect(select)} ${includeSelect} FROM ${sql(
       this.tableName
     )}
