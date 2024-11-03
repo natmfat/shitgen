@@ -143,50 +143,73 @@ export class Model<
   private generateSelect(
     select: Array<keyof ModelData>,
     returning: boolean = false,
-    parentTable: string = this.tableName
-  ) {
+    parentTable: string = this.tableName,
+    hasIncludeFragment: boolean = false
+  ): SqlFragment {
     const columns =
       select.length > 0
         ? select.map((column) =>
             sql(this.createIdentifier(String(column), parentTable))
           )
+        : hasIncludeFragment
+        ? sql``
         : sql`*`;
+
+    // @todo maybe use sql`${this.tableName}*` ??
 
     // @todo do not use * with include (pass include selects into here)
 
-    return sql`${returning ? sql`RETURNING ` : sql``}${columns}`;
+    return sql`${returning ? sql`RETURNING` : sql``} ${columns}`;
+  }
+
+  private emptyFragmentArray(fragment: SqlFragment[]) {
+    return fragment.length === 0 ? sql`` : fragment;
+  }
+
+  private findReference(
+    columnName: string,
+    parentTable: string = this.tableName
+  ) {
+    const column = this.database
+      .getTable(parentTable)
+      .columns.find((column) => column.name === columnName);
+
+    assert(
+      column,
+      `expected to find column "${columnName}" in table "${parentTable}"`
+    );
+    assert(
+      column.reference,
+      `expected column "${columnName}" in table "${parentTable}" to have a reference`
+    );
+
+    // @todo utility type: WellDefined?
+    return column as MockColumn & {
+      reference: NonNullable<MockColumn["reference"]>;
+    };
   }
 
   private generateInclude(
     include: IncludeOperator<ModelData, ModelRelationship>
   ) {
-    const joins: SqlFragment[] = [];
-    const select: SqlFragment[] = [];
+    const joinFragment: SqlFragment[] = [];
+    const selectFragment: SqlFragment[] = [];
 
     for (const [columnName, select] of Object.entries(include)) {
-      const column = this.database
-        .getTable(this.tableName)
-        .columns.find((column) => column.name === columnName);
-      assert(
-        column,
-        `expected to find column "${columnName}" in table "${this.tableName}"`
-      );
-      assert(
-        column.reference,
-        `expected column "${columnName}" in table "${this.tableName}" to have a reference`
-      );
+      const column = this.findReference(columnName);
 
-      if (typeof select === "boolean") {
-        joins.push(
-          sql`JOIN ON ${sql(this.createIdentifier(column.name))} = ${sql(
-            this.createIdentifier(
-              column.reference.columnName,
-              column.reference.tableName
-            )
-          )}`
-        );
-      } else {
-        select.push(
+      joinFragment.push(
+        sql`JOIN ${sql(column.reference.tableName)} ON ${sql(
+          this.createIdentifier(column.name)
+        )} = ${sql(
+          this.createIdentifier(
+            column.reference.columnName,
+            column.reference.tableName
+          )
+        )}`
+      );
+      if (typeof select !== "boolean") {
+        selectFragment.push(
           this.generateSelect(
             Object.keys(select),
             false,
@@ -197,8 +220,8 @@ export class Model<
     }
 
     return {
-      joins,
-      select,
+      joinFragment: joinFragment,
+      selectFragment: selectFragment,
     };
   }
 
@@ -207,10 +230,11 @@ export class Model<
     WhereRelationship extends BaseRelationship<WhereData>
   >(
     where: WhereOperator<WhereData, WhereRelationship>,
-    parentTable: string = this.tableName
+    parentTable: string = this.tableName,
+    includeWhere: boolean = true
   ): string {
     // @todo very bad using unsafe (idk sql injections ok), fix that
-    return `WHERE ${Object.entries(where)
+    return `${includeWhere ? `WHERE` : ""} ${Object.entries(where)
       .map(([key, operators]) => {
         const selector = this.createIdentifier(key, parentTable);
 
@@ -220,6 +244,18 @@ export class Model<
           return `${selector} IS NULL`;
         } else if (operators && typeof operators === "object") {
           // @todo check if key is a relationship w/ mock db (if it is, then build where with diff parentTable!)
+          // console.log(selector, operators);
+          try {
+            const column = this.findReference(key, parentTable);
+            return this.generateWhere(
+              operators as any,
+              column.reference.tableName,
+              false
+            );
+          } catch (error) {
+            // no reference found, do nothing
+            // @todo pass parameter before making reference checks? error handling like this seems kind of pythonic
+          }
 
           // return this.generateWhere(operator as any, this.getTableFromId(key));
           // otherwise, it's an operator
@@ -252,7 +288,7 @@ export class Model<
 
         return `${selector} = '${operators}'`;
       })
-      .join(" AND ")}`;
+      .join(" AND ")}`.trim();
   }
 
   async create({
@@ -291,7 +327,8 @@ export class Model<
     include?: ResolvedIncludeOperator;
     limit?: number;
   }) {
-    const { joins, select: includeSelect } = this.generateInclude(include);
+    const { joinFragment, selectFragment } = this.generateInclude(include);
+    // @todo generateSelect should accept and object instead to keep default values
 
     return sql<
       Array<
@@ -303,11 +340,14 @@ export class Model<
           >
       >
     >`
-      SELECT ${this.generateSelect(select)} ${includeSelect} FROM ${sql(
-      this.tableName
-    )}
+      SELECT ${this.generateSelect(
+        select,
+        false,
+        this.tableName,
+        selectFragment.length > 0
+      )} ${this.emptyFragmentArray(selectFragment)} FROM ${sql(this.tableName)}
+      ${this.emptyFragmentArray(joinFragment)}
       ${sql.unsafe(this.generateWhere(where))}
-      ${joins}
       ${limit ? sql`LIMIT ${limit}` : sql``}
     `;
   }

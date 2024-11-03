@@ -1,3 +1,4 @@
+import assert from "assert";
 import { Nullable } from "../types";
 import { MockColumn, MockColumnReference } from "./MockColumn";
 import { MockTable } from "./MockTable";
@@ -7,7 +8,7 @@ export class MockDatabase {
   tables: Record<string, MockTable> = {};
 
   constructor(
-    from: Record<
+    fromRecord: Record<
       string,
       Record<
         string,
@@ -21,8 +22,9 @@ export class MockDatabase {
       >
     > = {}
   ) {
-    Object.entries(from).forEach(([tableName, columns]) => {
+    Object.entries(fromRecord).forEach(([tableName, columns]) => {
       const table = new MockTable(tableName);
+      this.tables[tableName] = table;
       Object.entries(columns).forEach(
         ([columnName, { type: columnType, ...props }]) => {
           const column = new MockColumn(columnName, columnType);
@@ -43,10 +45,7 @@ export class MockDatabase {
 
   getTable(tableName: string): MockTable {
     const table = this.tables[tableName];
-    if (!table) {
-      throw new Error("Table does not exist.");
-    }
-
+    assert(table, `table with name "${tableName}" does not exist`);
     return table;
   }
 
