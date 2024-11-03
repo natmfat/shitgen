@@ -1,9 +1,14 @@
 import { sql } from "./sql";
 import { OneOf, Nullable, IsNotNullable } from "../types";
-import { MockDatabase } from "../MockDatabase";
+import { MockColumn, MockDatabase } from "../MockDatabase";
+import assert from "assert";
 
 // Relationships will have some of Data's keys, leading to another, different Data type
-type BaseRelationship<Data> = Partial<Record<keyof Data, unknown>>;
+type BaseRelationship<Data> = Partial<
+  Record<keyof Data, Record<string, unknown>>
+>;
+
+type SqlFragment = ReturnType<typeof sql>;
 
 type NonNullValue<NonNull extends true | false, value> = NonNull extends true
   ? value
@@ -57,17 +62,20 @@ type WhereOperator<
   [Key in keyof BaseData]: Partial<WhereOperatorMap<BaseData[Key]>>;
 }> &
   Partial<{
-    // this feels redundant but I guess we have to reaffirm Key is a keyof BaseData?
-    [Key in keyof Relationship extends infer _ ? keyof BaseData : never]:
-      | BaseData[Key]
-      | Partial<{
-          [SubKey in keyof Relationship[Key]]: WhereOperatorMap<
-            Relationship[Key][SubKey]
-          >;
-        }>;
+    [Key in keyof BaseData]:
+      | Partial<WhereOperatorMap<BaseData[Key]>>
+      | (Key extends keyof Relationship
+          ?
+              | BaseData[Key]
+              | Partial<{
+                  [SubKey in keyof Relationship[Key]]: WhereOperatorMap<
+                    Relationship[Key][SubKey]
+                  >;
+                }>
+          : never);
   }>;
 
-// @todo more than 1 relationship (use WhereOperator<value, value> if extends?)
+// @todo more than 1 relationship deep -> recursive types (use WhereOperator<value, value> if extends?)
 
 type IncludeOperator<
   Data,
@@ -79,6 +87,25 @@ type IncludeOperator<
         [SubKey in keyof Relationship[Key]]: boolean;
       }>;
 }>;
+
+type IncludeOperatorResult<
+  Data,
+  Relationship extends BaseRelationship<Data>,
+  RelationshipKeys extends keyof Relationship
+> = {
+  [Key in RelationshipKeys]: IncludeOperator<
+    Data,
+    Relationship
+  >[Key] extends boolean
+    ? Pick<Relationship, Key>
+    : IncludeOperator<Data, Relationship>[Key] extends Partial<infer Sub>
+    ? Pick<Relationship, Key> & {
+        [SubKey in keyof Sub]: SubKey extends keyof Relationship[Key]
+          ? Pick<Relationship[Key], SubKey>
+          : never;
+      }
+    : never;
+};
 
 // METHOD ARGUMENTS & RETURN TYPES
 
@@ -102,23 +129,78 @@ export class Model<
 
   // @todo this should not exist, use mock db instead
   // private getTableFromId(key: string) {
-  //   return key.endsWith("id") ? key.substring(0, key.length - 2) : key;
+  //   // return key.endsWith("id") ? key.substring(0, key.length - 2) : key;
   // }
 
   private createIdentifier(
     column: string,
     parentTable: string = this.tableName
   ) {
+    // @todo wrap in sql()
+    // will require rewriting generate where
     return `${parentTable}.${column}`;
   }
 
-  private generateSelect(select: Array<keyof ModelData>, returning = false) {
+  private generateSelect(
+    select: Array<keyof ModelData>,
+    returning: boolean = false,
+    parentTable: string = this.tableName
+  ) {
     const columns =
       select.length > 0
-        ? select.map((column) => sql(this.createIdentifier(String(column))))
+        ? select.map((column) =>
+            sql(this.createIdentifier(String(column), parentTable))
+          )
         : sql`*`;
 
+    // @todo do not use * with include (pass include selects into here)
+
     return sql`${returning ? sql`RETURNING ` : sql``}${columns}`;
+  }
+
+  private generateInclude(
+    include: IncludeOperator<ModelData, ModelRelationship>
+  ) {
+    const joins: SqlFragment[] = [];
+    const select: SqlFragment[] = [];
+
+    for (const [columnName, select] of Object.entries(include)) {
+      const column = this.database
+        .getTable(this.tableName)
+        .columns.find((column) => column.name === columnName);
+      assert(
+        column,
+        `expected to find column "${columnName}" in table "${this.tableName}"`
+      );
+      assert(
+        column.reference,
+        `expected column "${columnName}" in table "${this.tableName}" to have a reference`
+      );
+
+      if (typeof select === "boolean") {
+        joins.push(
+          sql`JOIN ON ${sql(this.createIdentifier(column.name))} = ${sql(
+            this.createIdentifier(
+              column.reference.columnName,
+              column.reference.tableName
+            )
+          )}`
+        );
+      } else {
+        select.push(
+          this.generateSelect(
+            Object.keys(select),
+            false,
+            column.reference.tableName
+          )
+        );
+      }
+    }
+
+    return {
+      joins,
+      select,
+    };
   }
 
   private generateWhere<
@@ -132,12 +214,14 @@ export class Model<
     return `WHERE ${Object.entries(where)
       .map(([key, operators]) => {
         const selector = this.createIdentifier(key, parentTable);
+
         if (typeof operators === "undefined") {
           return;
         } else if (operators === null) {
           return `${selector} IS NULL`;
         } else if (operators && typeof operators === "object") {
-          // @todo check if key is a relationship w/ mock db (if it is, then )
+          // @todo check if key is a relationship w/ mock db (if it is, then build where with diff parentTable!)
+
           // return this.generateWhere(operator as any, this.getTableFromId(key));
           // otherwise, it's an operator
           const [operator, targetValue] = Object.entries(operators)[0];
@@ -191,28 +275,45 @@ export class Model<
     return data.length > 0 ? data[0] : null;
   }
 
-  async findMany<T extends keyof ModelData>({
+  async findMany<
+    SelectKey extends keyof ModelData,
+    IncludeKey extends keyof ModelRelationship
+  >({
     select = [],
     where = {},
+    include = {},
     limit,
-  }: // include = {},
-  {
-    select?: Array<T>;
+  }: {
+    select?: Array<SelectKey>;
     where?: WhereOperator<ModelData, ModelRelationship>;
     include?: IncludeOperator<ModelData, ModelRelationship>;
-    limit?: number;
-  }): Promise<Array<Pick<ModelData, T>>> {
-    // const includeColumns = Object.entries(include).map(([key, value]) => {
-    //   if(typeof value === "boolean") {
-    //     return
-    //   }
-    //   // `${this.getTableFromId(key)}.${}`
-    // });
-    // @todo columns also need to modify left join
+    /*
+    avatar_id: true
+    avatar_id: {
+      name: true
+    }
+    Pick<ModelRelationship, IncludeKey>
 
-    return sql<Array<Pick<ModelData, T>>>`
-      SELECT ${this.generateSelect(select)} FROM ${sql(this.tableName)}
+    what I want:
+    Pick<ModelData, SelectKey> & Pick<ModelRelationship, RelationshipKey>[subkeys]
+
+  {
+    
+  }
+    
+
+    */
+    limit?: number;
+  }): Promise<Array<Pick<ModelData, SelectKey>>> {
+    type test = Pick<ModelRelationship, IncludeKey>;
+    const { joins, select: includeSelect } = this.generateInclude(include);
+
+    return sql<Array<Pick<ModelData, SelectKey>>>`
+      SELECT ${this.generateSelect(select)} ${includeSelect} FROM ${sql(
+      this.tableName
+    )}
       ${sql.unsafe(this.generateWhere(where))}
+      ${joins}
       ${limit ? sql`LIMIT ${limit}` : sql``}
     `;
   }
