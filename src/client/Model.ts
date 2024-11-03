@@ -147,10 +147,16 @@ export class Model<
     referenceColumnName,
     hasIncludeFragment = false,
   }: {
+    // columns that we are selecting from the table
     select: Array<keyof ModelData>;
+    // should we prefix the select statement with RETURNING
     returning?: boolean;
+    // table that the columns belong to
     parentTable?: string;
+    // if provided, alias the column into __referenceColumnName__column
+    // where column is a key of select
     referenceColumnName?: string;
+    // if there are more select statements later on, this will add a comma at the end
     hasIncludeFragment?: boolean;
   }): SqlFragment {
     const columns =
@@ -165,13 +171,15 @@ export class Model<
                   : sql``
               }`
           )
-        : sql`${sql(parentTable)}.*${hasIncludeFragment ? sql`,` : sql``} `;
+        : sql`${sql(parentTable)}.*`;
 
     // @todo maybe use sql`${this.tableName}*` ??
 
     // @todo do not use * with include (pass include selects into here)
 
-    return sql`${returning ? sql`RETURNING` : sql``} ${columns}`;
+    return sql`${returning ? sql`RETURNING` : sql``} ${columns}${
+      hasIncludeFragment ? sql`,` : sql``
+    }`;
   }
 
   private emptyFragmentArray(fragment: SqlFragment[]) {
