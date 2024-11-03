@@ -1,5 +1,5 @@
 import { sql } from "./sql";
-import { OneOf, Nullable, IsNotNullable } from "../types";
+import { OneOf, IsNotNullable } from "../types";
 import { MockColumn, MockDatabase } from "../MockDatabase";
 import assert from "assert";
 
@@ -140,20 +140,32 @@ export class Model<
     return `${parentTable}.${column}`;
   }
 
-  private generateSelect(
-    select: Array<keyof ModelData>,
-    returning: boolean = false,
-    parentTable: string = this.tableName,
-    hasIncludeFragment: boolean = false
-  ): SqlFragment {
+  private generateSelect({
+    select,
+    returning = false,
+    parentTable = this.tableName,
+    referenceColumnName,
+    hasIncludeFragment = false,
+  }: {
+    select: Array<keyof ModelData>;
+    returning?: boolean;
+    parentTable?: string;
+    referenceColumnName?: string;
+    hasIncludeFragment?: boolean;
+  }): SqlFragment {
     const columns =
       select.length > 0
-        ? select.map((column) =>
-            sql(this.createIdentifier(String(column), parentTable))
+        ? select.map(
+            (column, i) =>
+              sql`${sql(this.createIdentifier(String(column), parentTable))} ${
+                referenceColumnName
+                  ? sql`AS ${sql(
+                      `__${referenceColumnName}_${String(column)}`
+                    )} ${i !== select.length - 1 ? sql`,` : sql``}`
+                  : sql``
+              }`
           )
-        : hasIncludeFragment
-        ? sql``
-        : sql`*`;
+        : sql`${sql(parentTable)}.*${hasIncludeFragment ? sql`,` : sql``} `;
 
     // @todo maybe use sql`${this.tableName}*` ??
 
@@ -210,11 +222,11 @@ export class Model<
       );
       if (typeof select !== "boolean") {
         selectFragment.push(
-          this.generateSelect(
-            Object.keys(select),
-            false,
-            column.reference.tableName
-          )
+          this.generateSelect({
+            select: Object.keys(select),
+            parentTable: column.reference.tableName,
+            referenceColumnName: columnName,
+          })
         );
       }
     }
@@ -234,7 +246,8 @@ export class Model<
     includeWhere: boolean = true
   ): string {
     // @todo very bad using unsafe (idk sql injections ok), fix that
-    return `${includeWhere ? `WHERE` : ""} ${Object.entries(where)
+
+    const whereStatement = Object.entries(where)
       .map(([key, operators]) => {
         const selector = this.createIdentifier(key, parentTable);
 
@@ -288,7 +301,11 @@ export class Model<
 
         return `${selector} = '${operators}'`;
       })
-      .join(" AND ")}`.trim();
+      .join(" AND ");
+
+    return `${
+      includeWhere && whereStatement.length > 0 ? `WHERE` : ""
+    } ${whereStatement}`.trim();
   }
 
   async create({
@@ -327,7 +344,8 @@ export class Model<
     include?: ResolvedIncludeOperator;
     limit?: number;
   }) {
-    const { joinFragment, selectFragment } = this.generateInclude(include);
+    const { joinFragment, selectFragment: includeSelectFragment } =
+      this.generateInclude(include);
     // @todo generateSelect should accept and object instead to keep default values
 
     return sql<
@@ -340,12 +358,12 @@ export class Model<
           >
       >
     >`
-      SELECT ${this.generateSelect(
+      SELECT ${this.generateSelect({
         select,
-        false,
-        this.tableName,
-        selectFragment.length > 0
-      )} ${this.emptyFragmentArray(selectFragment)} FROM ${sql(this.tableName)}
+        hasIncludeFragment: includeSelectFragment.length > 0,
+      })} ${this.emptyFragmentArray(includeSelectFragment)} FROM ${sql(
+      this.tableName
+    )}
       ${this.emptyFragmentArray(joinFragment)}
       ${sql.unsafe(this.generateWhere(where))}
       ${limit ? sql`LIMIT ${limit}` : sql``}
@@ -364,7 +382,7 @@ export class Model<
     return sql`
       UPDATE ${sql(this.tableName)} SET ${sql(data as any, Object.keys(data))}
       ${sql.unsafe(this.generateWhere(where))}
-      ${this.generateSelect(select, true)}
+      ${this.generateSelect({ select, returning: true })}
     `;
   }
 
