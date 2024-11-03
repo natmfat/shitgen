@@ -182,6 +182,12 @@ export class Model<
     }`;
   }
 
+  /**
+   * Given an array of sql statements, return an empty sql string or the array \
+   * If you provide sql`[]` (where fragment is an empty array) unexpected things happen, so we force it into sql`` instead
+   * @param fragment Array of sql statements that could be empty
+   * @returns A non-empty array of sql statements OR an empty sql string
+   */
   private emptyFragmentArray(fragment: SqlFragment[]) {
     return fragment.length === 0 ? sql`` : fragment;
   }
@@ -245,12 +251,15 @@ export class Model<
     };
   }
 
+  // @todo use object for args, like generateSelect
   private generateWhere<
     WhereData extends Record<string, unknown>,
     WhereRelationship extends BaseRelationship<WhereData>
   >(
     where: WhereOperator<WhereData, WhereRelationship>,
     parentTable: string = this.tableName,
+    // should we prefix the where statement with WHERE
+    // this only occurs IF the where operator produces a meaningful result
     includeWhere: boolean = true
   ): string {
     // @todo very bad using unsafe (idk sql injections ok), fix that
@@ -264,8 +273,6 @@ export class Model<
         } else if (operators === null) {
           return `${selector} IS NULL`;
         } else if (operators && typeof operators === "object") {
-          // @todo check if key is a relationship w/ mock db (if it is, then build where with diff parentTable!)
-          // console.log(selector, operators);
           try {
             const column = this.findReference(key, parentTable);
             return this.generateWhere(
@@ -335,7 +342,30 @@ export class Model<
     return data.length > 0 ? data[0] : null;
   }
 
+  /**
+   * Properly format row into its expected type
+   * @param rowSource Row returned from postgres querys
+   * @returns Properly formatted row (must be typed later)
+   *
+   * @example
+   * formatRow({
+   *   id: '1393ca77-391a-4cb7-9aca-4c9a905fc3fa',
+   *   palette_id: '2',
+   *  __palette_id_id: '2',
+   *   __palette_id_thumbnail_colors: [ '#0e1525', '#1c2333', '#0053a6', '#0079f2' ]
+   * })
+   * // this will produce the object
+   * // this will correspond to our later type casts
+   * {
+   *   id: '1393ca77-391a-4cb7-9aca-4c9a905fc3fa',
+   *   palette_id: {
+   *     id: '2',
+   *     thumbnail_colors: [ '#0e1525', '#1c2333', '#0053a6', '#0079f2' ]
+   *   }
+   * }
+   */
   private formatRow(rowSource: Record<string, unknown>) {
+    // make a copy cause immutable data & pure functions or whatever
     const row = { ...rowSource };
     for (const key of Object.keys(row)) {
       // if starts with __, like __palette_id__thumbnail_colors
