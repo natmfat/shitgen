@@ -196,10 +196,7 @@ export class Model<
     columnName: string,
     parentTable: string = this.tableName
   ) {
-    const column = this.database
-      .getTable(parentTable)
-      .columns.find((column) => column.name === columnName);
-
+    const column = this.database.getTable(parentTable).getColumn(columnName);
     assert(
       column,
       `expected to find column "${columnName}" in table "${parentTable}"`

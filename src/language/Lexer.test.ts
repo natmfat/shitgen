@@ -12,7 +12,7 @@ function random(min: number, max: number) {
 
 const getTokens = (sql: string) => new Lexer(sql).getTokens();
 
-// @todo lexer should give tokens "types" (ie: identifier, sql statement, identifier type, comma, etc.)
+// @todo lexer should give tokens "types" (ie: identifier, sql statement, identifier type, comma, etc.) (maybe in v2?)
 
 export const SQL_CREATE_TABLE_PALETTE = /* sql */ `CREATE TABLE IF NOT EXISTS palette_ (
   id bigint UNIQUE GENERATED ALWAYS AS IDENTITY,

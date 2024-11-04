@@ -31,7 +31,7 @@
   "scripts": {
     "test": "vitest",
     "build": "tsup 'src/**/*[^.test].ts' src/index.ts --dts --format esm",
-    "start": "tsx ./src/index.ts",
+    "start": "tsx ./src/index.ts generate testSchema.sql --out-file database.ts",
     "start:model": "tsx ./src/database/Model.ts",
     "prebuild": "rimraf dist/",
     "prepublishOnly": "pnpm run build"

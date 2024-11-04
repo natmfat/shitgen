@@ -13,6 +13,12 @@ NOTE: I did not look at how other libraries achieve type generation, so the appr
 
 ## Installation
 
+NOTE: not stable, do not install unless you want bugs
+
+```bash
+pnpm add shitgen -D
+```
+
 ## Usage
 
 ```bash
