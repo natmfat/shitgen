@@ -17,23 +17,7 @@ export class Lexer {
     ).filter((word) => word.length > 0);
   }
 
-  // undo what parse word does I guess
-  stringifyTokens(tokens: string[]) {
-    const words: string[] = [];
-    for (let i = 0; i < tokens.length; i++) {
-      const token = tokens[i];
-      const nextToken = tokens[i + 1];
-      if (SQL_OPERATORS.has(nextToken)) {
-        words.push(token + nextToken);
-        i++;
-      } else {
-        words.push(token);
-      }
-    }
-
-    return words.join(SQL_DELIMITER);
-  }
-
+  // frankly the entire sql string could be parsed like this, not just for words
   private parseWord(word: string): string[] {
     const trimmed = word.trim();
     const internalTokens: string[] = [];

@@ -30,7 +30,7 @@
   },
   "scripts": {
     "test": "vitest",
-    "build": "tsup src/**/*.ts src/index.ts --dts --format esm",
+    "build": "tsup 'src/**/*[^.test].ts' src/index.ts --dts --format esm",
     "start": "tsx ./src/index.ts",
     "start:model": "tsx ./src/database/Model.ts",
     "prebuild": "rimraf dist/",
