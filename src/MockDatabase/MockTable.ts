@@ -71,10 +71,12 @@ export class MockTable {
       type = type.substring(0, type.length - 2);
     }
 
+    const formattedType = type.toUpperCase() as keyof typeof convertType;
     const convertedType =
-      type in convertType
-        ? convertType[type.toUpperCase() as keyof typeof convertType]
+      formattedType in convertType
+        ? convertType[formattedType]
         : convertType["TEXT"];
+
     return isArray ? `Array<${convertedType}>` : convertedType;
   }
 
