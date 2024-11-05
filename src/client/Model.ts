@@ -3,14 +3,30 @@ import { OneOf, IsNotNullable } from "../types";
 import { MockColumn, MockDatabase } from "../MockDatabase";
 import assert from "assert";
 
-// Relationships will have some of Data's keys, leading to another, different Data type
+/** ReturnType of sql templating function */
+type SqlFragment = ReturnType<typeof sql>;
+
 type BaseData = Record<string, unknown>;
+
+/**
+ * A type indicating which of Data's keys are actually foreign relationships to another model
+ * @example
+ * type UserData = {
+ *   avatar_id: number
+ * }
+ *
+ * type UserRelationship = {
+ *   avatar_id: AvatarData
+ * }
+ */
 type BaseRelationship<Data extends BaseData> = Partial<
   Record<keyof Data, BaseData>
 >;
 
-type SqlFragment = ReturnType<typeof sql>;
-
+/**
+ * Is the field allowed to be null? \
+ * "NonNull" indicates that NOT NULL was specified in the schema
+ */
 type NonNullValue<NonNull extends true | false, value> = NonNull extends true
   ? value
   : value | null;
@@ -142,22 +158,23 @@ export class Model<
 
   private generateSelect({
     select,
-    returning = false,
     parentTable = this.tableName,
     referenceColumnName,
-    hasIncludeFragment = false,
+    includeReturning = false,
+
+    includeComma = false,
   }: {
     // columns that we are selecting from the table
     select: Array<keyof ModelData>;
-    // should we prefix the select statement with RETURNING
-    returning?: boolean;
     // table that the columns belong to
     parentTable?: string;
     // if provided, alias the column into __referenceColumnName__column
     // where column is a key of select
     referenceColumnName?: string;
+    // should we prefix the select statement with RETURNING
+    includeReturning?: boolean;
     // if there are more select statements later on, this will add a comma at the end
-    hasIncludeFragment?: boolean;
+    includeComma?: boolean;
   }): SqlFragment {
     const columns =
       select.length > 0
@@ -177,8 +194,8 @@ export class Model<
 
     // @todo do not use * with include (pass include selects into here)
 
-    return sql`${returning ? sql`RETURNING` : sql``} ${columns}${
-      hasIncludeFragment ? sql`,` : sql``
+    return sql`${includeReturning ? sql`RETURNING` : sql``} ${columns}${
+      includeComma ? sql`,` : sql``
     }`;
   }
 
@@ -409,7 +426,7 @@ export class Model<
     const rows = await sql`
       SELECT ${this.generateSelect({
         select,
-        hasIncludeFragment: includeSelectFragment.length > 0,
+        includeComma: includeSelectFragment.length > 0,
       })} ${this.emptyFragmentArray(includeSelectFragment)} FROM ${sql(
       this.tableName
     )}
@@ -441,7 +458,7 @@ export class Model<
     return sql`
       UPDATE ${sql(this.tableName)} SET ${sql(data as any, Object.keys(data))}
       ${sql.unsafe(this.generateWhere(where))}
-      ${this.generateSelect({ select, returning: true })}
+      ${this.generateSelect({ select, includeReturning: true })}
     `;
   }
 
