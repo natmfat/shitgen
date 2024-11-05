@@ -271,11 +271,11 @@ export class Model<
         column = this.findReference(key, parentTable);
       } catch (error) {}
       if (column) {
-        return this.generateWhere(
-          operators as any,
-          column.reference.tableName,
-          false
-        );
+        return this.generateWhere({
+          where: operators as any,
+          parentTable: column.reference.tableName,
+          includeWhere: false,
+        });
       }
 
       const [operator, targetValue] = Object.entries(operators)[0];
@@ -312,13 +312,19 @@ export class Model<
   private generateWhere<
     WhereData extends Record<string, unknown>,
     WhereRelationship extends BaseRelationship<WhereData>
-  >(
-    where: WhereOperator<WhereData, WhereRelationship>,
-    parentTable: string = this.tableName,
-    // should we prefix the where statement with WHERE
-    // this only occurs IF the where operator produces a meaningful result
-    includeWhere: boolean = true
-  ): SqlFragment {
+  >({
+    where,
+    parentTable = this.tableName,
+    includeWhere = true,
+  }: {
+    where: WhereOperator<WhereData, WhereRelationship>;
+    parentTable?: string;
+    /**
+     * should we prefix the where statement with WHERE
+     * this only occurs IF the where operator produces a meaningful result
+     */
+    includeWhere?: boolean;
+  }): SqlFragment {
     // @todo very bad using unsafe (idk sql injections ok), fix that
 
     const whereFragments: SqlFragment[] = [];
@@ -431,7 +437,7 @@ export class Model<
       this.tableName
     )}
       ${this.emptyFragmentArray(joinFragment)}
-      ${this.generateWhere(where)}
+      ${this.generateWhere({ where })}
       ${limit ? sql`LIMIT ${limit}` : sql``}
     `;
 
@@ -457,7 +463,7 @@ export class Model<
   }) {
     return sql`
       UPDATE ${sql(this.tableName)} SET ${sql(data as any, Object.keys(data))}
-      ${this.generateWhere(where)}
+      ${this.generateWhere({ where })}
       ${this.generateSelect({ select, includeReturning: true })}
     `;
   }
@@ -469,7 +475,7 @@ export class Model<
   }) {
     return sql`
       DELETE FROM ${sql(this.tableName)} 
-      ${this.generateWhere(where)}
+      ${this.generateWhere({ where })}
     `;
   }
 }
