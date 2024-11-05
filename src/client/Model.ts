@@ -1,5 +1,5 @@
 import { sql } from "./sql";
-import { OneOf, IsNotNullable } from "../types";
+import { OneOf, IsNotNullable, Nullable, Defined } from "../types";
 import { MockColumn, MockDatabase } from "../MockDatabase";
 import assert from "assert";
 
@@ -142,18 +142,13 @@ export class Model<
 > {
   constructor(private tableName: string, private database: MockDatabase) {}
 
-  // @todo this should not exist, use mock db instead
-  // private getTableFromId(key: string) {
-  //   // return key.endsWith("id") ? key.substring(0, key.length - 2) : key;
-  // }
-
   private createIdentifier(
     column: string,
     parentTable: string = this.tableName
   ) {
     // @todo wrap in sql()
     // will require rewriting generate where
-    return `${parentTable}.${column}`;
+    return sql(`${parentTable}.${column}`);
   }
 
   private generateSelect({
@@ -180,7 +175,7 @@ export class Model<
       select.length > 0
         ? select.map(
             (column, i) =>
-              sql`${sql(this.createIdentifier(String(column), parentTable))} ${
+              sql`${this.createIdentifier(String(column), parentTable)} ${
                 referenceColumnName
                   ? sql`AS ${sql(
                       `__${referenceColumnName}__${String(column)}`
@@ -224,9 +219,7 @@ export class Model<
     );
 
     // @todo utility type: WellDefined?
-    return column as MockColumn & {
-      reference: NonNullable<MockColumn["reference"]>;
-    };
+    return column as Defined<MockColumn, "reference">;
   }
 
   private generateInclude(
@@ -239,13 +232,11 @@ export class Model<
       const column = this.findReference(columnName);
 
       joinFragment.push(
-        sql`JOIN ${sql(column.reference.tableName)} ON ${sql(
-          this.createIdentifier(column.name)
-        )} = ${sql(
-          this.createIdentifier(
-            column.reference.columnName,
-            column.reference.tableName
-          )
+        sql`JOIN ${sql(column.reference.tableName)} ON ${this.createIdentifier(
+          column.name
+        )} = ${this.createIdentifier(
+          column.reference.columnName,
+          column.reference.tableName
         )}`
       );
       if (typeof select !== "boolean") {
@@ -265,6 +256,58 @@ export class Model<
     };
   }
 
+  private generateWhereObject(
+    key: string,
+    operators: unknown,
+    parentTable: string = this.tableName
+  ): SqlFragment {
+    const selector = this.createIdentifier(key, parentTable);
+    if (operators === null) {
+      return sql`${selector} IS NULL`;
+    } else if (operators && typeof operators === "object") {
+      // @todo pass parameter before making reference checks? error handling like this seems kind of pythonic
+      let column: Nullable<Defined<MockColumn, "reference">> = null;
+      try {
+        column = this.findReference(key, parentTable);
+      } catch (error) {}
+      if (column) {
+        return this.generateWhere(
+          operators as any,
+          column.reference.tableName,
+          false
+        );
+      }
+
+      const [operator, targetValue] = Object.entries(operators)[0];
+      switch (operator) {
+        case "eq":
+          return targetValue === null
+            ? sql`${selector} IS NULL`
+            : sql`${selector} = '${targetValue}'`;
+        case "neq":
+          return targetValue === null
+            ? sql`${selector} IS NOT NULL`
+            : sql`${selector} != '${targetValue}'`;
+        case "contains":
+          return sql`${selector} LIKE '%${targetValue}%'`;
+        case "startsWith":
+          return sql`${selector} LIKE '${targetValue}%'`;
+        case "endsWith":
+          return sql`${selector} LIKE '%${targetValue}'`;
+        case "gt":
+          return sql`${selector} > ${targetValue}`;
+        case "lt":
+          return sql`${selector} < ${targetValue}`;
+        case "gte":
+          return sql`${selector} >= ${targetValue}`;
+        case "lte":
+          return sql`${selector} >= ${targetValue}`;
+      }
+    }
+
+    return sql`${selector} = ${String(operators)}`;
+  }
+
   // @todo use object for args, like generateSelect
   private generateWhere<
     WhereData extends Record<string, unknown>,
@@ -275,66 +318,23 @@ export class Model<
     // should we prefix the where statement with WHERE
     // this only occurs IF the where operator produces a meaningful result
     includeWhere: boolean = true
-  ): string {
+  ): SqlFragment {
     // @todo very bad using unsafe (idk sql injections ok), fix that
 
-    const whereStatement = Object.entries(where)
-      .map(([key, operators]) => {
-        const selector = this.createIdentifier(key, parentTable);
+    const whereFragments: SqlFragment[] = [];
+    const whereEntries = Object.entries(where);
+    whereEntries.forEach(([key, operators], i) => {
+      whereFragments.push(
+        this.generateWhereObject(key, operators, parentTable)
+      );
+      if (i !== whereEntries.length - 1) {
+        whereFragments.push(sql`AND`);
+      }
+    });
 
-        if (typeof operators === "undefined") {
-          return;
-        } else if (operators === null) {
-          return `${selector} IS NULL`;
-        } else if (operators && typeof operators === "object") {
-          try {
-            const column = this.findReference(key, parentTable);
-            return this.generateWhere(
-              operators as any,
-              column.reference.tableName,
-              false
-            );
-          } catch (error) {
-            // no reference found, do nothing
-            // @todo pass parameter before making reference checks? error handling like this seems kind of pythonic
-          }
-
-          // return this.generateWhere(operator as any, this.getTableFromId(key));
-          // otherwise, it's an operator
-          const [operator, targetValue] = Object.entries(operators)[0];
-          switch (operator) {
-            case "eq":
-              return targetValue === null
-                ? `${selector} IS NULL`
-                : `${selector} = '${targetValue}'`;
-            case "neq":
-              return targetValue === null
-                ? `${selector} IS NOT NULL`
-                : `${selector} != '${targetValue}'`;
-            case "contains":
-              return `${selector} LIKE '%${targetValue}%'`;
-            case "startsWith":
-              return `${selector} LIKE '${targetValue}%'`;
-            case "endsWith":
-              return `${selector} LIKE '%${targetValue}'`;
-            case "gt":
-              return `${selector} > ${targetValue}`;
-            case "lt":
-              return `${selector} < ${targetValue}`;
-            case "gte":
-              return `${selector} >= ${targetValue}`;
-            case "lte":
-              return `${selector} >= ${targetValue}`;
-          }
-        }
-
-        return `${selector} = '${operators}'`;
-      })
-      .join(" AND ");
-
-    return `${
-      includeWhere && whereStatement.length > 0 ? `WHERE` : ""
-    } ${whereStatement}`.trim();
+    return sql`${
+      includeWhere && whereFragments.length > 0 ? `WHERE` : ""
+    } ${this.emptyFragmentArray(whereFragments)}`;
   }
 
   async create({
@@ -431,7 +431,7 @@ export class Model<
       this.tableName
     )}
       ${this.emptyFragmentArray(joinFragment)}
-      ${sql.unsafe(this.generateWhere(where))}
+      ${this.generateWhere(where)}
       ${limit ? sql`LIMIT ${limit}` : sql``}
     `;
 
@@ -457,7 +457,7 @@ export class Model<
   }) {
     return sql`
       UPDATE ${sql(this.tableName)} SET ${sql(data as any, Object.keys(data))}
-      ${sql.unsafe(this.generateWhere(where))}
+      ${this.generateWhere(where)}
       ${this.generateSelect({ select, includeReturning: true })}
     `;
   }
@@ -469,7 +469,7 @@ export class Model<
   }) {
     return sql`
       DELETE FROM ${sql(this.tableName)} 
-      ${sql.unsafe(this.generateWhere(where))}
+      ${this.generateWhere(where)}
     `;
   }
 }

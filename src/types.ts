@@ -14,3 +14,7 @@ export type IsNotNullable<T> = (T extends null ? true : false) extends false
 export type OneOf<T> = {
   [K in keyof T]: Pick<T, K>;
 }[keyof T];
+
+export type Defined<T, U extends keyof T> = Omit<T, U> & {
+  [Key in U]: NonNullable<T[Key]>;
+};
