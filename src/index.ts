@@ -34,7 +34,7 @@ program
   });
 
 program
-  .command("seed")
+  .command("push")
   .description("push schema to database")
   .argument("<input-schema>", "input sql schema")
   .action(async (inputSchema: string) => {
@@ -56,7 +56,7 @@ program
     "--out-file <output-file>",
     "where to put the generated database client"
   )
-  .option("--test", "Replace named imports with './src'")
+  .option("--test", "Replace named imports from NPM with local paths")
   .action(async (inputSchema: string, options) => {
     const rawSql = await fs.readFile(inputSchema, "utf-8");
     const database = await createDatabase(rawSql);

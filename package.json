@@ -29,10 +29,11 @@
     }
   },
   "scripts": {
+    "pretest": "pnpm run db:generate",
     "test": "vitest",
-    "build": "tsup 'src/**/*[^.test].ts' src/index.ts --dts --format esm",
-    "db:generate": "tsx ./src/index.ts generate testSchema.sql --out-file database.ts --test",
-    "start:model": "tsx ./src/database/Model.ts",
+    "db:generate": "tsx ./src/index.ts generate ./schemas/v0.sql --out-file ./src/database.ts --test",
+    "db:push": "tsx ./src/index.ts push ./schemas/v0.sql",
+    "build": "tsup",
     "prebuild": "rimraf dist/",
     "prepublishOnly": "pnpm run build"
   },

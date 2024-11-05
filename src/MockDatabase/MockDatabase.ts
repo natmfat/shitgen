@@ -72,12 +72,12 @@ export class MockDatabase {
 
   /**
    * Output an entire valid TypeScript file to be saved somewhere
-   * @param test Replace named imports with './src'
+   * @param test Replace named imports from NPM with local paths
    * @returns Fully functional database client, like Prisma, but worse
    */
   generate(test: boolean) {
     return [
-      this.generateImports(test ? "./src" : packageName),
+      this.generateImports(test ? "." : packageName),
       this.generateMockDatabase(),
       Object.values(this.tables).map((table) => [
         table.generateModelData(),
