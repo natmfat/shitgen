@@ -31,8 +31,8 @@
   "scripts": {
     "pretest": "pnpm run db:generate",
     "test": "vitest",
-    "db:generate": "tsx ./src/index.ts generate ./schemas/v0.sql --out-file ./src/database.ts --test",
-    "db:push": "tsx ./src/index.ts push ./schemas/v0.sql",
+    "db:generate": "tsx ./src/index.ts generate ./schema.sql --out-file ./src/database.ts --test",
+    "db:push": "tsx ./src/index.ts push ./schema.sql",
     "build": "tsup",
     "prebuild": "rimraf dist/",
     "prepublishOnly": "pnpm run build"
