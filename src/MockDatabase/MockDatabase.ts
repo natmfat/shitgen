@@ -62,8 +62,7 @@ export class MockDatabase {
     return `const database = new MockDatabase(${this.toString()});`;
   }
 
-  generateImports(name: string = packageName) {
-    // @todo add option in generation to specify package name override for local testing
+  generateImports(name: string) {
     return [
       `import { MockDatabase } from "${name}/MockDatabase";`,
       `import { Model } from "${name}/client/Model";`,
@@ -73,11 +72,12 @@ export class MockDatabase {
 
   /**
    * Output an entire valid TypeScript file to be saved somewhere
+   * @param test Replace named imports with './src'
    * @returns Fully functional database client, like Prisma, but worse
    */
-  generate() {
+  generate(test: boolean) {
     return [
-      this.generateImports(),
+      this.generateImports(test ? "./src" : packageName),
       this.generateMockDatabase(),
       Object.values(this.tables).map((table) => [
         table.generateModelData(),
