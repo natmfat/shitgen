@@ -339,7 +339,7 @@ export class Model<
     });
 
     return sql`${
-      includeWhere && whereFragments.length > 0 ? `WHERE` : ""
+      includeWhere && whereFragments.length > 0 ? sql`WHERE` : sql``
     } ${this.emptyFragmentArray(whereFragments)}`;
   }
 

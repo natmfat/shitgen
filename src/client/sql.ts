@@ -13,11 +13,13 @@ declare global {
 }
 
 if (process.env.NODE_ENV === "production") {
-  sql = postgres({
-    debug: true,
-  });
+  sql = postgres();
 } else {
-  global.__sql = global.__sql || postgres();
+  global.__sql =
+    global.__sql ||
+    postgres({
+      debug: true,
+    });
   sql = global.__sql;
 }
 

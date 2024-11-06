@@ -29,10 +29,12 @@
     }
   },
   "scripts": {
-    "pretest": "pnpm run db:generate",
+    "pretest": "pnpm run db:nuke && pnpm run db:generate && pnpm run db:push",
     "test": "vitest",
     "db:generate": "tsx ./src/index.ts generate ./schema.sql --out-file ./src/database.ts --test",
     "db:push": "tsx ./src/index.ts push ./schema.sql",
+    "db:nuke": "tsx ./src/index.ts nuke --force",
+    "playground": "tsx ./playground.ts",
     "build": "tsup",
     "prebuild": "rimraf dist/",
     "prepublishOnly": "pnpm run build"

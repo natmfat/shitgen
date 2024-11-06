@@ -1,6 +1,5 @@
-import { expect, test } from "vitest";
+import { expect, describe, test } from "vitest";
 import { Lexer } from "./Lexer";
-import { describe } from "node:test";
 
 function choice<T>(array: T[]) {
   return array[Math.floor(Math.random() * array.length)] as T;
@@ -38,13 +37,13 @@ export const SQL_CREATE_TABLE_PREVIEW = /* sql */ `CREATE TABLE IF NOT EXISTS pr
   UNIQUE (project_id, version)
 );`;
 
-test("lexer obtains tokens properly", () => {
-  describe("empty sql statement", () => {
-    expect(getTokens("")).toStrictEqual([]);
+describe("lexer obtains tokens accurately", () => {
+  describe("handling white space", () => {
+    test("empty sql statement", () => {
+      expect(getTokens("")).toStrictEqual([]);
+    });
 
-    // expect(new Lexer(``).getTokens()).toStrictEqual([]);
-
-    describe("+ randomized testing", () => {
+    test("randomized strings", () => {
       expect(
         getTokens(
           new Array(random(1, 100))
@@ -52,13 +51,14 @@ test("lexer obtains tokens properly", () => {
             .map(() => choice([" ", "\t", "\n"]))
             .join(choice([" ", "\t", "\n"]))
         )
-      ).toStrictEqual([]);
+      ).toEqual([]);
     });
   });
 
-  describe("basic create table (sql palette_)", () => {
-    // prettier-ignore
-    expect(getTokens(SQL_CREATE_TABLE_PALETTE)).toStrictEqual([
+  describe("create table", () => {
+    test("palette_", () => {
+      // prettier-ignore
+      expect(getTokens(SQL_CREATE_TABLE_PALETTE)).toStrictEqual([
       "CREATE", "TABLE", "IF", "NOT", "EXISTS", "palette_", "(",
         "id", "bigint", "UNIQUE", "GENERATED", "ALWAYS", "AS", "IDENTITY", ",",
         "name", "text", "NOT", "NULL", ",",
@@ -66,8 +66,9 @@ test("lexer obtains tokens properly", () => {
         "raw_css", "text", "NOT", "NULL",
       ")", ";",
     ]);
+    });
 
-    describe("+ default values (sql project_)", () => {
+    test("project_", () => {
       // prettier-ignore
       expect(getTokens(SQL_CREATE_TABLE_PROJECT)).toStrictEqual([
         "CREATE", "TABLE", "IF", "NOT", "EXISTS", "project_", "(",
@@ -79,7 +80,7 @@ test("lexer obtains tokens properly", () => {
       ]);
     });
 
-    describe("+ unique (sql preview_)", () => {
+    test("preview_", () => {
       // prettier-ignore
       expect(getTokens(SQL_CREATE_TABLE_PREVIEW)).toStrictEqual([
         "CREATE", "TABLE", "IF", "NOT", "EXISTS", "preview_", "(",

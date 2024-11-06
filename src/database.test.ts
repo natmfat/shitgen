@@ -1,40 +1,42 @@
-import { test, expect, beforeAll } from "vitest";
-import { shitgen, sql } from "./database";
-import { describe } from "node:test";
+import { test, expect, describe, beforeAll } from "vitest";
+import { PaletteData, shitgen, sql } from "./database";
 import { nukeDatabase } from "./client/nuke";
 
-beforeAll(async () => {
-  await nukeDatabase();
+const palettes: Array<Omit<PaletteData, "id">> = [
+  {
+    name: "Replit Light",
+    thumbnail_colors: ["#ebeced", "#fcfcfc", "#6bb5ff", "#0f87ff"],
+    raw_css: "",
+  },
+  {
+    name: "Replit Dark",
+    thumbnail_colors: ["#0e1525", "#1c2333", "#0053a6", "#0079f2"],
+    raw_css: "",
+  },
+];
 
-  // seed palettes
-  await sql`
-    INSERT INTO palette_ (name, thumbnail_colors, raw_css)
-    VALUES ("Replit Light", ${["#ebeced", "#fcfcfc", "#6bb5ff", "#0f87ff"]}, "")
-  `;
-  await sql`
-    INSERT INTO palette_ (name, thumbnail_colors, raw_css)
-    VALUES ("Replit Dark", ${["#0e1525", "#1c2333", "#0053a6", "#0079f2"]}, "")
-  `;
+// @todo beforeAll should seed, afterall should delete?
 
-  // create a few fake projects w/ previews
-});
+describe("client accurately translates queries", () => {
+  describe("palette_ find many", () => {
+    test("no args", async () => {
+      expect(await shitgen.palette.findMany({})).toEqual(
+        await sql`SELECT * from palette_`
+      );
+    });
 
-test("client accurately translates queries", () => {
-  describe("[project_] find many with include", async () => {
-    expect(
-      await shitgen.project.findMany({
-        include: {
-          palette_id: {
-            id: true,
-            thumbnail_colors: true,
-          },
-        },
-      })
-    ).toStrictEqual(
-      await sql`
-        SELECT "project_".*, "palette_"."id", "palette_"."thumbnail_colors" FROM "project_"
-        JOIN "palette_" ON "project_"."palette_id" = "palette_"."id"
-      `
-    );
+    test("+ select", async () => {
+      expect(await shitgen.palette.findMany({ select: ["name"] })).toEqual(
+        await sql`SELECT name from palette_`
+      );
+    });
+
+    test("+ where", async () => {
+      expect(
+        await shitgen.palette.findMany({ where: { name: "Replit Dark" } })
+      ).toEqual(
+        await sql`SELECT name from palette_ WHERE name = 'Replit Dark'`
+      );
+    });
   });
 });
