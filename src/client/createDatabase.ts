@@ -45,9 +45,17 @@ export async function createDatabase(rawSql: string) {
           scanner.nextToken(); // advance past comma
 
           const typeScanner = new Scanner(typeModifiers);
+
+          // get column modifiers
           const modifierPrimaryKey = typeScanner.includesSequence([
             "PRIMARY",
             "KEY",
+          ]);
+          const modifierGenerated = typeScanner.includesSequence([
+            "GENERATED",
+            "ALWAYS",
+            "AS",
+            "IDENTITY",
           ]);
           const modifierNotNull = typeScanner.includesSequence(["NOT", "NULL"]);
           const modifierDefault = typeScanner.includesTokens(["DEFAULT"]);
@@ -67,7 +75,10 @@ export async function createDatabase(rawSql: string) {
 
           column.modifierPrimaryKey = modifierPrimaryKey;
           column.modifierNotNull =
-            modifierNotNull || modifierPrimaryKey || !!column.reference;
+            modifierNotNull ||
+            modifierPrimaryKey ||
+            modifierGenerated ||
+            !!column.reference;
           column.modifierDefault = modifierDefault;
 
           table.addColumn(column);
