@@ -8,6 +8,7 @@ const convertType = {
   INT: "number",
   INTEGER: "number",
   BIGINT: "number",
+  SMALLINT: "number",
   FLOAT: "number",
   DOUBLE: "number",
   BOOL: "boolean",
