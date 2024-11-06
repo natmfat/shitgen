@@ -62,12 +62,27 @@ export class MockDatabase {
     return `const database = new MockDatabase(${this.toString()});`;
   }
 
+  /**
+   * Include any necessary imports for the client to use
+   * @param name Import path to use, uses "shitgen" for real environments and . for testing
+   * @returns Necessary imports, like the base model and mock db
+   */
   generateImports(name: string) {
     return [
       `import { MockDatabase } from "${name}/MockDatabase";`,
       `import { Model } from "${name}/client/Model";`,
       `export { sql } from "${name}/client/sql";`,
     ].join("\n");
+  }
+
+  /**
+   * Create "shitgen" client, containing each model and their methods
+   * @returns
+   */
+  generateClient() {
+    return `export const shitgen = { ${Object.values(this.tables)
+      .map((table) => table.clientName)
+      .join(", ")} };`;
   }
 
   /**
@@ -86,6 +101,7 @@ export class MockDatabase {
         table.generateModelRelationship(this),
         table.generateModel(),
       ]),
+      this.generateClient(),
     ]
       .flat(Infinity)
       .join("\n");
