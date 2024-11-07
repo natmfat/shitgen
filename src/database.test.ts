@@ -16,6 +16,7 @@ const palettes: Array<Omit<PaletteData, "id">> = [
 ];
 
 // @todo beforeAll should seed, afterall should delete?
+// @todo should be able to do one to many relationships with where + include
 
 describe("client accurately translates queries", () => {
   describe("palette_ find many", () => {

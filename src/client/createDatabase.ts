@@ -79,7 +79,7 @@ export async function createDatabase(rawSql: string) {
             modifierPrimaryKey ||
             modifierGenerated ||
             !!column.reference;
-          column.modifierDefault = modifierDefault;
+          column.modifierDefault = modifierDefault || modifierGenerated;
 
           table.addColumn(column);
         }

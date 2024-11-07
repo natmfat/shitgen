@@ -48,5 +48,6 @@ CREATE TABLE IF NOT EXISTS avatar_ (
 
 The full list of command documentation can be found with `shitgen --help`.
 
-@todo adapters that implement a shared interface for different kinds of postgres clients?
-@todo I need testing really badly
+@todo adapters that implement a shared interface for different kinds of postgres clients?  
+@todo I need testing really badly  
+@todo one to many relationships (auto create?)
