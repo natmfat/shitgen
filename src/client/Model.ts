@@ -353,7 +353,6 @@ export class Model<
     select?: Array<SelectKey>;
     where?: WhereOperator<ModelData, ModelRelationship>;
     include?: ResolvedIncludeOperator;
-    limit?: number;
   }) {
     const data = await this.findMany({ ...args, limit: 1 });
     return data.length === 1 ? data[0] : null;
