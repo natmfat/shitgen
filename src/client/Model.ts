@@ -343,21 +343,6 @@ export class Model<
     } ${this.emptyFragmentArray(whereFragments)}`;
   }
 
-  async find<
-    SelectKey extends keyof ModelData,
-    ResolvedIncludeOperator extends IncludeOperator<
-      ModelData,
-      ModelRelationship
-    >
-  >(args: {
-    select?: Array<SelectKey>;
-    where?: WhereOperator<ModelData, ModelRelationship>;
-    include?: ResolvedIncludeOperator;
-  }) {
-    const data = await this.findMany({ ...args, limit: 1 });
-    return data.length === 1 ? data[0] : null;
-  }
-
   /**
    * Properly format row into its expected type
    * @param rowSource Row returned from postgres querys
@@ -404,6 +389,21 @@ export class Model<
     return row;
   }
 
+  async find<
+    SelectKey extends keyof ModelData,
+    ResolvedIncludeOperator extends IncludeOperator<
+      ModelData,
+      ModelRelationship
+    >
+  >(args: {
+    select?: Array<SelectKey>;
+    where?: WhereOperator<ModelData, ModelRelationship>;
+    include?: ResolvedIncludeOperator;
+  }) {
+    const data = await this.findMany({ ...args, limit: 1 });
+    return data.length === 1 ? data[0] : null;
+  }
+
   async findMany<
     SelectKey extends keyof ModelData,
     ResolvedIncludeOperator extends IncludeOperator<
@@ -439,7 +439,10 @@ export class Model<
 
     return rows.map(
       (row) =>
-        this.formatRow(row) as Pick<ModelData, SelectKey> &
+        this.formatRow(row) as Omit<
+          Pick<ModelData, SelectKey>,
+          keyof ResolvedIncludeOperator
+        > &
           IncludeOperatorResult<
             ModelData,
             ModelRelationship,
