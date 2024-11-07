@@ -179,9 +179,9 @@ export class Model<
                 referenceColumnName
                   ? sql`AS ${sql(
                       `__${referenceColumnName}__${String(column)}`
-                    )} ${i !== select.length - 1 ? sql`,` : sql``}`
+                    )}`
                   : sql``
-              }`
+              } ${i !== select.length - 1 ? sql`,` : sql``}`
           )
         : sql`${sql(parentTable)}.*`;
 
