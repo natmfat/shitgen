@@ -113,7 +113,7 @@ type IncludeOperatorResult<
 > = {
   [Key in keyof Include]: Include[Key] extends boolean
     ? Key extends keyof Relationship
-      ? Pick<Relationship, Key>
+      ? Relationship[Key]
       : never
     : Include[Key] extends Partial<Record<infer SubKey, boolean>>
       ? Key extends keyof Relationship
@@ -343,13 +343,20 @@ export class Model<
     } ${this.emptyFragmentArray(whereFragments)}`;
   }
 
-  async find<T extends keyof ModelData>(args: {
-    select?: Array<T>;
+  async find<
+    SelectKey extends keyof ModelData,
+    ResolvedIncludeOperator extends IncludeOperator<
+      ModelData,
+      ModelRelationship
+    >
+  >(args: {
+    select?: Array<SelectKey>;
     where?: WhereOperator<ModelData, ModelRelationship>;
-    include?: IncludeOperator<ModelData, ModelRelationship>;
+    include?: ResolvedIncludeOperator;
+    limit?: number;
   }) {
     const data = await this.findMany({ ...args, limit: 1 });
-    return data.length > 0 ? data[0] : null;
+    return data.length === 1 ? data[0] : null;
   }
 
   /**
@@ -407,7 +414,7 @@ export class Model<
   >({
     select = [],
     where = {},
-    include = {} as ResolvedIncludeOperator,
+    include,
     limit,
   }: {
     select?: Array<SelectKey>;
@@ -416,7 +423,7 @@ export class Model<
     limit?: number;
   }) {
     const { joinFragment, selectFragment: includeSelectFragment } =
-      this.generateInclude(include);
+      this.generateInclude(include || {});
     // @todo generateSelect should accept and object instead to keep default values
 
     const rows = await sql`
