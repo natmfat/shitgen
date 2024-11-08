@@ -164,6 +164,7 @@ export class Model<
    * @param args.select Select columns you need, defaults to selecting everything
    * @param args.where Condition entry must meet
    * @param args.include Include relationship columns (only 1 level deep), defaults to including nothing
+   * @param args.orderBy Sort entries by column
    * @returns A single entry (if found) or null (if not found)
    */
   async find<
@@ -176,6 +177,7 @@ export class Model<
     select?: Array<SelectKey>;
     where?: WhereOperator<ModelData, ModelRelationship>;
     include?: ResolvedIncludeOperator;
+    orderBy?: OrderByOperator<ModelData, ModelRelationship>;
   }) {
     const data = await this.findMany({ ...args, limit: 1 });
     return data.length === 1 ? data[0] : null;
