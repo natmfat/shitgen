@@ -92,6 +92,19 @@ type WhereOperator<
           : never);
   }>;
 
+type Order = "ASC" | "DESC";
+
+type OrderByOperator<
+  Data extends BaseData,
+  Relationship extends BaseRelationship<Data>
+> = Partial<
+  Omit<Record<keyof Data, Order>, keyof Relationship> & {
+    [Key in keyof Relationship]: Partial<{
+      [SubKey in keyof Relationship[Key]]: Order;
+    }>;
+  }
+>;
+
 // @todo more than 1 relationship deep -> recursive types (use WhereOperator<value, value> if extends?)
 
 type IncludeOperator<
@@ -151,12 +164,25 @@ export class Model<
     return sql(`${parentTable}.${column}`);
   }
 
+  private joinByFragment(
+    fragments: SqlFragment[],
+    joinBy: SqlFragment
+  ): SqlFragment {
+    if (fragments.length === 0) {
+      return sql``;
+    }
+
+    return sql`${fragments.map(
+      (fragment, i) =>
+        sql`${fragment}${i !== fragments.length - 1 ? joinBy : sql``}`
+    )}`;
+  }
+
   private generateSelect({
     select,
     parentTable = this.tableName,
     referenceColumnName,
     includeReturning = false,
-
     includeComma = false,
   }: {
     // columns that we are selecting from the table
@@ -173,15 +199,18 @@ export class Model<
   }): SqlFragment {
     const columns =
       select.length > 0
-        ? select.map(
-            (column, i) =>
-              sql`${this.createIdentifier(String(column), parentTable)} ${
-                referenceColumnName
-                  ? sql`AS ${sql(
-                      `__${referenceColumnName}__${String(column)}`
-                    )}`
-                  : sql``
-              } ${i !== select.length - 1 ? sql`,` : sql``}`
+        ? this.joinByFragment(
+            select.map(
+              (column) =>
+                sql`${this.createIdentifier(String(column), parentTable)} ${
+                  referenceColumnName
+                    ? sql`AS ${sql(
+                        `__${referenceColumnName}__${String(column)}`
+                      )}`
+                    : sql``
+                }`
+            ),
+            sql`, `
           )
         : sql`${sql(parentTable)}.*`;
 
@@ -333,14 +362,82 @@ export class Model<
       whereFragments.push(
         this.generateWhereObject(key, operators, parentTable)
       );
-      if (i !== whereEntries.length - 1) {
-        whereFragments.push(sql`AND`);
-      }
     });
 
     return sql`${
       includeWhere && whereFragments.length > 0 ? sql`WHERE` : sql``
-    } ${this.emptyFragmentArray(whereFragments)}`;
+    } ${this.joinByFragment(whereFragments, sql` AND `)}`;
+  }
+
+  private generateOrderByObject({
+    orderBy = {},
+    parentTable = this.tableName,
+  }: {
+    orderBy: OrderByOperator<ModelData, ModelRelationship>;
+    parentTable?: string;
+  }) {
+    const ascFragment: SqlFragment[] = [];
+    const descFragment: SqlFragment[] = [];
+
+    for (const [columnName, order] of Object.entries(orderBy)) {
+      if (order === "DESC") {
+        descFragment.push(
+          sql`${this.createIdentifier(columnName, parentTable)}`
+        );
+      } else if (order === "ASC") {
+        ascFragment.push(
+          sql`${this.createIdentifier(columnName, parentTable)}`
+        );
+      }
+
+      let column: Nullable<MockColumn> = null;
+      try {
+        column = this.findReference(columnName);
+      } catch (error) {}
+      if (column && column.reference) {
+        const fragments = this.generateOrderByObject({
+          orderBy: order,
+          parentTable: column.reference.tableName,
+        });
+        ascFragment.push(...fragments.ascFragment);
+        descFragment.push(...fragments.descFragment);
+      }
+    }
+
+    return { ascFragment, descFragment };
+  }
+
+  private generateOrderBy({
+    orderBy = {},
+  }: {
+    orderBy: OrderByOperator<ModelData, ModelRelationship>;
+  }) {
+    const { ascFragment, descFragment } = this.generateOrderByObject({
+      orderBy,
+    });
+
+    const hasAsc = ascFragment.length > 0;
+    const hasDesc = descFragment.length > 0;
+
+    if (!hasAsc && !hasDesc) {
+      return sql``;
+    }
+
+    return sql`
+      ORDER BY 
+        ${
+          hasAsc
+            ? sql`${this.joinByFragment(ascFragment, sql`, `)} ASC${
+                hasDesc ? sql`, ` : sql``
+              }`
+            : sql``
+        } 
+        ${
+          hasDesc
+            ? sql`${this.joinByFragment(descFragment, sql`, `)} DESC`
+            : sql``
+        }
+    `;
   }
 
   /**
@@ -415,11 +512,13 @@ export class Model<
     where = {},
     include,
     limit,
+    orderBy = {},
   }: {
     select?: Array<SelectKey>;
     where?: WhereOperator<ModelData, ModelRelationship>;
     include?: ResolvedIncludeOperator;
     limit?: number;
+    orderBy?: OrderByOperator<ModelData, ModelRelationship>;
   }) {
     const { joinFragment, selectFragment: includeSelectFragment } =
       this.generateInclude(include || {});
@@ -435,6 +534,7 @@ export class Model<
       ${this.emptyFragmentArray(joinFragment)}
       ${this.generateWhere({ where })}
       ${limit ? sql`LIMIT ${limit}` : sql``}
+      ${this.generateOrderBy({ orderBy })}
     `;
 
     return rows.map(
