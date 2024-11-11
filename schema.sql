@@ -1,3 +1,9 @@
+CREATE TABLE IF NOT EXISTS provider_ (
+  id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  name ENUM('google', 'github', 'discord') NOT NULL,
+  profile_id text NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS palette_ (
   id bigint UNIQUE GENERATED ALWAYS AS IDENTITY,
   name text NOT NULL,

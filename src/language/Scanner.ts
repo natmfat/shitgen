@@ -1,11 +1,20 @@
 import { SQL_WHITESPACE } from "./Lexer";
 
+// @todo token until greedy method (auto balance paren)
+// this will allow us to support enum types
+// alternatively, we can cheat and simply change behavior in createdatabase if type == enum
+// ex) priority ENUM('Low', 'Medium', 'High') NOT NULL
+
 export class Scanner {
   private tokens: string[] = [];
   private pos = 0;
 
   constructor(token: string[]) {
     this.tokens = token;
+  }
+
+  backTrack(pos: number) {
+    this.pos = pos;
   }
 
   getPos() {

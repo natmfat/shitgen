@@ -2,6 +2,9 @@ import { MockDatabase, MockColumn, MockTable } from "../MockDatabase";
 
 import { Lexer } from "../language/Lexer";
 import { Scanner } from "../language/Scanner";
+import { Nullable } from "../types";
+
+// @todo look into parsing balanced paren?
 
 /**
  * Seed real & mock database from raw SQL
@@ -15,7 +18,7 @@ export async function createDatabase(rawSql: string) {
   const database = new MockDatabase();
 
   while (scanner.hasNextToken()) {
-    const startPos = scanner.getPos();
+    const startSqlPos = scanner.getPos();
     if (scanner.expectSequence(["CREATE", "TABLE", "IF", "NOT", "EXISTS"])) {
       const table = new MockTable(scanner.currentToken());
       database.addTable(table);
@@ -25,21 +28,34 @@ export async function createDatabase(rawSql: string) {
 
         // begin parsing table columns
         while (scanner.untilToken(";")) {
-          const [columnName, columnType, ...typeModifiers] =
-            scanner.getTokensUntil([",", [")", ";"]]);
+          const columnName = scanner.currentToken();
+          const columnType = scanner.nextToken();
+          scanner.nextToken();
+
+          // if it's "UNIQUE" or "PRIMARY", this ain't a column name
+          if (columnName === columnName.toUpperCase()) {
+            scanner.getTokensUntil([")"]);
+            scanner.nextToken(); // advance past )
+            continue;
+          }
+
+          let typeEnum: Nullable<string[]> = null;
+
+          if (columnType === "ENUM") {
+            scanner.nextToken(); // skip left paren
+            typeEnum = scanner
+              .getTokensUntil(")")
+              .filter((value) => value !== ",") // strip comments
+              .map((value) => value.substring(1, value.length - 1)); // remove starting and ending quotes
+            scanner.nextToken(); // skip right paren
+          }
+
+          const typeModifiers = scanner.getTokensUntil([",", [")", ";"]]);
 
           // @todo investigate more deeply (basically just keep skipping if no column name)
           // we should only hit this if something went wrong tho
           if (!columnName || !columnType) {
             scanner.nextToken();
-            continue;
-          }
-
-          // @todo look into parsing balanced paren?
-          if (columnName === columnName.toUpperCase()) {
-            // if it's "UNIQUE" or "PRIMARY", this ain't a column name
-            scanner.getTokensUntil([")"]);
-            scanner.nextToken(); // advance past )
             continue;
           }
 
@@ -81,14 +97,14 @@ export async function createDatabase(rawSql: string) {
             modifierGenerated ||
             !!column.reference;
           column.modifierDefault = modifierDefault || modifierGenerated;
+          column.typeEnum = typeEnum;
 
           table.addColumn(column);
         }
 
         // no need to skip ) or ; because the while loop will do it for us
       }
-      const endPos = scanner.getPos();
-      table.rawSql = tokens.slice(startPos, endPos).join(" ");
+      table.rawSql = tokens.slice(startSqlPos, scanner.getPos()).join(" ");
     }
     scanner.nextToken();
   }

@@ -1,19 +1,7 @@
 import assert from "assert";
-import { Nullable } from "../types";
+import { Defined, Nullable } from "../types";
 import { MockColumn } from "./MockColumn";
 import { MockDatabase } from "./MockDatabase";
-
-const convertType = {
-  TEXT: "string",
-  INT: "number",
-  INTEGER: "number",
-  BIGINT: "number",
-  SMALLINT: "number",
-  FLOAT: "number",
-  DOUBLE: "number",
-  BOOL: "boolean",
-  BOOLEAN: "boolean",
-};
 
 export class MockTable {
   name: string;
@@ -57,7 +45,7 @@ export class MockTable {
    * Capitalized named export of the table,
    */
   get formattedName() {
-    return this.formatName(this.name);
+    return MockTable.formatName(this.name);
   }
 
   /**
@@ -70,7 +58,7 @@ export class MockTable {
   /**
    * user_ to User
    */
-  private formatName(name: string) {
+  static formatName(name: string) {
     return name
       .split("_")
       .map(
@@ -88,22 +76,22 @@ export class MockTable {
     return notNull ? type : `${type} | null`;
   }
 
-  private convertType(type: string) {
-    const isArray = type.endsWith("[]");
-    if (isArray) {
-      type = type.substring(0, type.length - 2);
-    }
-
-    const formattedType = type.toUpperCase() as keyof typeof convertType;
-    const convertedType =
-      formattedType in convertType
-        ? convertType[formattedType]
-        : convertType["TEXT"];
-
-    return isArray ? `Array<${convertedType}>` : convertedType;
-  }
-
   // all methods prefixed by generate mean "outputs valid Typescript", unless private
+
+  generateEnums() {
+    return (
+      this.columns.filter((column) => column.typeEnum !== null) as Array<
+        Defined<MockColumn, "typeEnum">
+      >
+    )
+      .map(
+        (column) =>
+          `export enum ${column.generateTypeEnum(this)} {\n${column.typeEnum
+            .map((value) => `  ${value.toUpperCase()} = "${value}"`)
+            .join(",\n")}\n}`
+      )
+      .join("\n");
+  }
 
   /**
    * Generate the TypeScript definition for data in a model
@@ -112,12 +100,7 @@ export class MockTable {
   generateModelData() {
     const modelData: string[] = [`export type ${this.formattedName}Data = {`];
     for (const column of this.columns) {
-      modelData.push(
-        `  ${column.name}: ${this.withNull(
-          this.convertType(column.type),
-          column.modifierNotNull
-        )};`
-      );
+      modelData.push(`  ${column.name}: ${column.generateType(this)};`);
     }
     modelData.push("}");
     return modelData.join("\n");
