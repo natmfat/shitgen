@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS project_ (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   palette_id bigint REFERENCES palette_(id) DEFAULT 0,
   prompt text NOT NULL,
-  public boolean DEFAULT true,
+  public boolean DEFAULT true
 );
 
 CREATE TABLE IF NOT EXISTS preview_ (

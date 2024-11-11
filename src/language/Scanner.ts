@@ -1,3 +1,5 @@
+import { SQL_WHITESPACE } from "./Lexer";
+
 export class Scanner {
   private tokens: string[] = [];
   private pos = 0;
@@ -8,6 +10,12 @@ export class Scanner {
 
   getPos() {
     return this.pos;
+  }
+
+  skipWhitespace() {
+    while (SQL_WHITESPACE.has(this.currentToken())) {
+      this.nextToken();
+    }
   }
 
   expectSequence(sequence: string[]) {

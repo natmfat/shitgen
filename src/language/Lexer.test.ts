@@ -34,11 +34,11 @@ export const SQL_CREATE_TABLE_PREVIEW = /* sql */ `CREATE TABLE IF NOT EXISTS pr
   prompt text NOT NULL,
   code text,
   thumbnail_src text,
-  UNIQUE (project_id, version)
+  UNIQUE (project_id, version) 
 );`;
 
 describe("lexer obtains tokens accurately", () => {
-  describe("handling white space", () => {
+  describe("handle white space", () => {
     test("empty sql statement", () => {
       expect(getTokens("")).toStrictEqual([]);
     });

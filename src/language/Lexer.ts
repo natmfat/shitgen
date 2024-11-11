@@ -1,40 +1,78 @@
-const SQL_OPERATORS = new Set(["(", ")", ",", ";"]);
-const SQL_DELIMITER = " ";
+import { Scanner } from "./Scanner";
+
+export const SQL_OPERATORS = new Set(["(", ")", ",", ";"]);
+export const SQL_WHITESPACE = new Set([" ", "\t", "\n"]);
 
 export class Lexer {
   private sql: string;
+  private tokens: string[] = [];
 
   constructor(sql: string) {
     this.sql = sql;
+    this.tokens = Lexer.skipWhitespace(Lexer.skipComments(this.analyze()));
   }
 
   getTokens() {
-    return (
-      this.sql
-        .split(SQL_DELIMITER)
-        .map(this.parseWord)
-        .flat(Infinity) as string[]
-    ).filter((word) => word.length > 0);
+    return this.tokens;
   }
 
-  // frankly the entire sql string could be parsed like this, not just for words
-  // @todo do this to remove comments too
-  private parseWord(word: string): string[] {
-    const trimmed = word.trim();
-    const internalTokens: string[] = [];
-    let token = "";
-    for (let i = 0; i < trimmed.length; i++) {
-      const char = trimmed.charAt(i);
-      if (SQL_OPERATORS.has(char)) {
-        internalTokens.push(token.trim());
-        internalTokens.push(char);
+  private analyze() {
+    const nextTokens: string[] = [];
+    let token: string = "";
+
+    const pushToken = (nextToken: string) => {
+      const formattedToken = nextToken.trim();
+      if (formattedToken.length > 0) {
+        nextTokens.push(formattedToken);
+      }
+    };
+
+    for (let i = 0; i < this.sql.length; i++) {
+      const char = this.sql.charAt(i);
+      if (SQL_OPERATORS.has(char) || SQL_WHITESPACE.has(char)) {
+        pushToken(token);
+        nextTokens.push(char);
         token = "";
       } else {
         token += char;
       }
     }
+    pushToken(token);
+    return nextTokens;
+  }
 
-    internalTokens.push(token.trim());
-    return internalTokens;
+  // @todo this should probably be moved to createDatabase/whatever will interpret the tokens
+  // I'm just doing it this way to save time
+  /**
+   * Given an array of tokens, remove comments
+   * @param tokens Array of tokens, returned from Lexer analysis
+   * @returns Array of tokens, free of comments
+   */
+  static skipComments(tokens: string[]) {
+    const nextTokens: string[] = [];
+    const scanner = new Scanner(tokens);
+    while (scanner.hasNextToken()) {
+      // skip comments
+      if (scanner.currentToken() === "--") {
+        scanner.getTokensUntil("\n");
+        scanner.nextToken(); // skip whitespace
+      }
+
+      nextTokens.push(scanner.currentToken());
+      scanner.nextToken();
+    }
+    return nextTokens;
+  }
+
+  /**
+   * Given an array of tokens, remove any whitespace \
+   * Do this after comments are removed (which depend on whitespace to terminate)
+   * @param tokens Array of tokens, returned from Lexer analysis
+   * @returns Array of tokens, free of whitepace
+   */
+  static skipWhitespace(tokens: string[]) {
+    return tokens
+      .map((token) => token.trim())
+      .filter((token) => token.length > 0);
   }
 }
