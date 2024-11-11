@@ -18,6 +18,7 @@ export class Lexer {
   }
 
   // frankly the entire sql string could be parsed like this, not just for words
+  // @todo do this to remove comments too
   private parseWord(word: string): string[] {
     const trimmed = word.trim();
     const internalTokens: string[] = [];

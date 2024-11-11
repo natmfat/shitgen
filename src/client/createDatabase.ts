@@ -36,7 +36,8 @@ export async function createDatabase(rawSql: string) {
           }
 
           // @todo look into parsing balanced paren?
-          if (columnName === "UNIQUE") {
+          if (columnName === columnName.toUpperCase()) {
+            // if it's "UNIQUE" or "PRIMARY", this ain't a column name
             scanner.getTokensUntil([")"]);
             scanner.nextToken(); // advance past )
             continue;
