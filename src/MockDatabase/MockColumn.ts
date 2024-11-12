@@ -26,7 +26,7 @@ const COPY_KEYS: Array<keyof MockColumn> = [
   "modifierPrimaryKey",
   "modifierNotNull",
   "modifierDefault",
-  "typeEnum",
+  "typeArgs",
   "reference",
 ];
 
@@ -38,7 +38,7 @@ export class MockColumn {
   modifierNotNull: boolean = false;
   modifierDefault: boolean = false;
 
-  typeEnum: Nullable<string[]> = null;
+  typeArgs: Nullable<string[]> = null;
 
   reference: Nullable<MockColumnReference> = null;
 

@@ -18,7 +18,7 @@ export class MockDatabase {
           modifierPrimaryKey: boolean;
           modifierNotNull: boolean;
           modifierDefault: boolean;
-          typeEnum: Nullable<string[]>;
+          typeArgs: Nullable<string[]>;
           reference: Nullable<MockColumnReference>;
         }
       >

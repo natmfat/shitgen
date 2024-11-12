@@ -39,11 +39,11 @@ export async function createDatabase(rawSql: string) {
             continue;
           }
 
-          let typeEnum: Nullable<string[]> = null;
+          let typeArgs: Nullable<string[]> = null;
 
           if (columnType === "ENUM") {
             scanner.nextToken(); // skip left paren
-            typeEnum = scanner
+            typeArgs = scanner
               .getTokensUntil(")")
               .filter((value) => value !== ",") // strip comments
               .map((value) => value.substring(1, value.length - 1)); // remove starting and ending quotes
@@ -97,7 +97,7 @@ export async function createDatabase(rawSql: string) {
             modifierGenerated ||
             !!column.reference;
           column.modifierDefault = modifierDefault || modifierGenerated;
-          column.typeEnum = typeEnum;
+          column.typeArgs = typeArgs;
 
           table.addColumn(column);
         }

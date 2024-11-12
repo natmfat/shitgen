@@ -72,21 +72,17 @@ export class MockTable {
     return name.charAt(0).toLowerCase() + name.substring(1);
   }
 
-  private withNull(type: string, notNull: boolean) {
-    return notNull ? type : `${type} | null`;
-  }
-
   // all methods prefixed by generate mean "outputs valid Typescript", unless private
 
   generateEnums() {
     return (
-      this.columns.filter((column) => column.typeEnum !== null) as Array<
-        Defined<MockColumn, "typeEnum">
+      this.columns.filter((column) => column.typeArgs !== null) as Array<
+        Defined<MockColumn, "typeArgs">
       >
     )
       .map(
         (column) =>
-          `export enum ${column.generateTypeEnum(this)} {\n${column.typeEnum
+          `export enum ${column.generateTypeEnum(this)} {\n${column.typeArgs
             .map((value) => `  ${value.toUpperCase()} = "${value}"`)
             .join(",\n")}\n}`
       )
