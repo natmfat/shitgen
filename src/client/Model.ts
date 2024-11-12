@@ -31,15 +31,15 @@ type NonNullValue<NonNull extends true | false, value> = NonNull extends true
   ? value
   : value | null;
 
-type WhereOperatorString<NonNull extends true | false> =
+type WhereOperatorString<NonNull extends true | false, Value> =
   | OneOf<{
-      eq: NonNullValue<NonNull, string>;
-      neq: NonNullValue<NonNull, string>;
+      eq: NonNullValue<NonNull, Value>;
+      neq: NonNullValue<NonNull, Value>;
       contains: string;
       endsWith: string;
       startsWith: string;
     }>
-  | NonNullValue<NonNull, string>;
+  | NonNullValue<NonNull, Value>;
 
 type WhereOperatorNumber<NonNull extends true | false> =
   | OneOf<{
@@ -60,15 +60,22 @@ type WhereOperatorBoolean<NonNull extends true | false> =
     }>
   | NonNullValue<NonNull, boolean>;
 
+type WhereOperatorAny<NonNull extends true | false, Value> =
+  | OneOf<{
+      eq: NonNullValue<NonNull, Value>;
+      neq: NonNullValue<NonNull, Value>;
+    }>
+  | NonNullValue<NonNull, Value>;
+
 // this "maps" a type of a value of Data to a the corresponding operators
 // prettier-ignore
 type WhereOperatorMap<Value> = NonNullable<Value> extends string
-  ? WhereOperatorString<IsNotNullable<Value>>
+  ? WhereOperatorString<IsNotNullable<Value>, Value>
   : NonNullable<Value> extends number
     ? WhereOperatorNumber<IsNotNullable<Value>>
     : NonNullable<Value> extends boolean
       ? WhereOperatorBoolean<IsNotNullable<Value>>
-      : never;
+      : WhereOperatorAny<IsNotNullable<Value>, Value>;
 
 type WhereOperator<
   Data extends BaseData,
