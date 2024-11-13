@@ -1,6 +1,8 @@
+CREATE TYPE provider_name_ AS ENUM ('google', 'github', 'discord');
+
 CREATE TABLE IF NOT EXISTS provider_ (
   id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-  name ENUM('google', 'github', 'discord') NOT NULL,
+  name provider_name_ NOT NULL,
   profile_id text NOT NULL
 );
 

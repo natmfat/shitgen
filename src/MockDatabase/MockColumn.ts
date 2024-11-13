@@ -1,7 +1,8 @@
 // why not just use the table class instead of tableName?
 
 import { Nullable } from "../types";
-import { MockTable } from "./MockTable";
+import { MockComponent } from "./MockComponent";
+import { MockDatabase } from "./MockDatabase";
 
 // because not all tables may be parsed yet!
 export type MockColumnReference = {
@@ -19,31 +20,20 @@ const convertType = {
   DOUBLE: "number",
   BOOL: "boolean",
   BOOLEAN: "boolean",
+  UUID: "string", // @todo uuid validator type
 };
 
-const COPY_KEYS: Array<keyof MockColumn> = [
-  "type",
-  "modifierPrimaryKey",
-  "modifierNotNull",
-  "modifierDefault",
-  "typeArgs",
-  "reference",
-];
-
-export class MockColumn {
-  name: string;
+export class MockColumn extends MockComponent {
   type: string;
 
   modifierPrimaryKey: boolean = false;
   modifierNotNull: boolean = false;
   modifierDefault: boolean = false;
 
-  typeArgs: Nullable<string[]> = null;
-
   reference: Nullable<MockColumnReference> = null;
 
   constructor(name: string, type: string) {
-    this.name = name;
+    super(name);
     this.type = type;
   }
 
@@ -55,17 +45,25 @@ export class MockColumn {
     this.reference = { tableName, columnName } satisfies MockColumnReference;
   }
 
+  /**
+   * Stringify relevant column data
+   * @returns A record version of the column
+   */
   toString() {
     return JSON.stringify(
-      COPY_KEYS.reduce((acc, key) => ({ ...acc, [key]: this[key] }), {})
+      (
+        [
+          "type",
+          "modifierPrimaryKey",
+          "modifierNotNull",
+          "modifierDefault",
+          "reference",
+        ] satisfies Array<keyof MockColumn>
+      ).reduce((acc, key) => ({ ...acc, [key]: this[key] }), {})
     );
   }
 
-  generateTypeEnum(table: MockTable) {
-    return `${table.formattedName}Data${MockTable.formatName(this.name)}`;
-  }
-
-  generateType(table: MockTable) {
+  generateType(database: MockDatabase) {
     let type = this.type;
 
     // is this type an array
@@ -75,12 +73,11 @@ export class MockColumn {
     }
 
     // map type into TypeScript type from record
-    const formattedType = type.toUpperCase();
-    let convertedType: string = convertType["TEXT"];
-    if (formattedType in convertType) {
-      convertedType = convertType[formattedType as keyof typeof convertType];
-    } else if (formattedType === "ENUM") {
-      return this.generateTypeEnum(table);
+    let convertedType: string =
+      convertType[type.toUpperCase() as keyof typeof convertType] ||
+      convertType["TEXT"];
+    if (database.hasType(type)) {
+      convertedType = database.getType(type).formattedName;
     }
 
     // TypeScript type, with array

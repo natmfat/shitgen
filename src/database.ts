@@ -1,15 +1,15 @@
 import { MockDatabase } from "./MockDatabase";
 import { Model } from "./client/Model";
 export { sql } from "./client/sql";
-const database = new MockDatabase({"provider_":{"id": {"type":"bigint","modifierPrimaryKey":true,"modifierNotNull":true,"modifierDefault":true,"typeArgs":null,"reference":null},"name": {"type":"ENUM","modifierPrimaryKey":false,"modifierNotNull":true,"modifierDefault":false,"typeArgs":["google","github","discord"],"reference":null},"profile_id": {"type":"text","modifierPrimaryKey":false,"modifierNotNull":true,"modifierDefault":false,"typeArgs":null,"reference":null}},"palette_":{"id": {"type":"bigint","modifierPrimaryKey":false,"modifierNotNull":true,"modifierDefault":true,"typeArgs":null,"reference":null},"name": {"type":"text","modifierPrimaryKey":false,"modifierNotNull":true,"modifierDefault":false,"typeArgs":null,"reference":null},"thumbnail_colors": {"type":"text[]","modifierPrimaryKey":false,"modifierNotNull":false,"modifierDefault":false,"typeArgs":null,"reference":null},"raw_css": {"type":"text","modifierPrimaryKey":false,"modifierNotNull":true,"modifierDefault":false,"typeArgs":null,"reference":null}},"project_":{"id": {"type":"uuid","modifierPrimaryKey":true,"modifierNotNull":true,"modifierDefault":true,"typeArgs":null,"reference":null},"palette_id": {"type":"bigint","modifierPrimaryKey":false,"modifierNotNull":true,"modifierDefault":true,"typeArgs":null,"reference":{"tableName":"palette_","columnName":"id"}},"prompt": {"type":"text","modifierPrimaryKey":false,"modifierNotNull":true,"modifierDefault":false,"typeArgs":null,"reference":null},"public": {"type":"boolean","modifierPrimaryKey":false,"modifierNotNull":false,"modifierDefault":true,"typeArgs":null,"reference":null}},"preview_":{"id": {"type":"bigint","modifierPrimaryKey":false,"modifierNotNull":true,"modifierDefault":true,"typeArgs":null,"reference":null},"project_id": {"type":"uuid","modifierPrimaryKey":false,"modifierNotNull":true,"modifierDefault":false,"typeArgs":null,"reference":{"tableName":"project_","columnName":"id"}},"version": {"type":"smallint","modifierPrimaryKey":false,"modifierNotNull":false,"modifierDefault":true,"typeArgs":null,"reference":null},"prompt": {"type":"text","modifierPrimaryKey":false,"modifierNotNull":true,"modifierDefault":false,"typeArgs":null,"reference":null},"code": {"type":"text","modifierPrimaryKey":false,"modifierNotNull":false,"modifierDefault":false,"typeArgs":null,"reference":null},"thumbnail_src": {"type":"text","modifierPrimaryKey":false,"modifierNotNull":false,"modifierDefault":false,"typeArgs":null,"reference":null}}});
-export enum ProviderDataName {
+const database = new MockDatabase({"provider_":{"id": {"type":"bigint","modifierPrimaryKey":true,"modifierNotNull":true,"modifierDefault":true,"reference":null},"name": {"type":"provider_name_","modifierPrimaryKey":false,"modifierNotNull":true,"modifierDefault":false,"reference":null},"profile_id": {"type":"text","modifierPrimaryKey":false,"modifierNotNull":true,"modifierDefault":false,"reference":null}},"palette_":{"id": {"type":"bigint","modifierPrimaryKey":false,"modifierNotNull":true,"modifierDefault":true,"reference":null},"name": {"type":"text","modifierPrimaryKey":false,"modifierNotNull":true,"modifierDefault":false,"reference":null},"thumbnail_colors": {"type":"text[]","modifierPrimaryKey":false,"modifierNotNull":false,"modifierDefault":false,"reference":null},"raw_css": {"type":"text","modifierPrimaryKey":false,"modifierNotNull":true,"modifierDefault":false,"reference":null}},"project_":{"id": {"type":"uuid","modifierPrimaryKey":true,"modifierNotNull":true,"modifierDefault":true,"reference":null},"palette_id": {"type":"bigint","modifierPrimaryKey":false,"modifierNotNull":true,"modifierDefault":true,"reference":{"tableName":"palette_","columnName":"id"}},"prompt": {"type":"text","modifierPrimaryKey":false,"modifierNotNull":true,"modifierDefault":false,"reference":null},"public": {"type":"boolean","modifierPrimaryKey":false,"modifierNotNull":false,"modifierDefault":true,"reference":null}},"preview_":{"id": {"type":"bigint","modifierPrimaryKey":false,"modifierNotNull":true,"modifierDefault":true,"reference":null},"project_id": {"type":"uuid","modifierPrimaryKey":false,"modifierNotNull":true,"modifierDefault":false,"reference":{"tableName":"project_","columnName":"id"}},"version": {"type":"smallint","modifierPrimaryKey":false,"modifierNotNull":false,"modifierDefault":true,"reference":null},"prompt": {"type":"text","modifierPrimaryKey":false,"modifierNotNull":true,"modifierDefault":false,"reference":null},"code": {"type":"text","modifierPrimaryKey":false,"modifierNotNull":false,"modifierDefault":false,"reference":null},"thumbnail_src": {"type":"text","modifierPrimaryKey":false,"modifierNotNull":false,"modifierDefault":false,"reference":null}}});
+export enum ProviderName {
   GOOGLE = "google",
   GITHUB = "github",
   DISCORD = "discord"
 }
 export type ProviderData = {
   id: number;
-  name: ProviderDataName;
+  name: ProviderName;
   profile_id: string;
 }
 export type ProviderAutoGenerated = "id";
@@ -17,7 +17,6 @@ export type ProviderOptional = "id";
 export type ProviderRelationship = {
 }
 const provider = new Model<ProviderData, ProviderAutoGenerated, ProviderOptional, ProviderRelationship>("provider_", database);
-
 export type PaletteData = {
   id: number;
   name: string;
@@ -29,7 +28,6 @@ export type PaletteOptional = "id";
 export type PaletteRelationship = {
 }
 const palette = new Model<PaletteData, PaletteAutoGenerated, PaletteOptional, PaletteRelationship>("palette_", database);
-
 export type ProjectData = {
   id: string;
   palette_id: number;
@@ -42,7 +40,6 @@ export type ProjectRelationship = {
   palette_id: PaletteData;
 }
 const project = new Model<ProjectData, ProjectAutoGenerated, ProjectOptional, ProjectRelationship>("project_", database);
-
 export type PreviewData = {
   id: number;
   project_id: string;

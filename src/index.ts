@@ -45,6 +45,11 @@ program
         await sql.unsafe(table.rawSql);
       }
     }
+    for (const type of Object.values(database.types)) {
+      if (type.rawSql) {
+        await sql.unsafe(type.rawSql);
+      }
+    }
     process.exit(0);
   });
 
@@ -60,7 +65,7 @@ program
   .action(async (inputSchema: string, options) => {
     const rawSql = await fs.readFile(inputSchema, "utf-8");
     const database = await createDatabase(rawSql);
-    await fs.writeFile(options.outFile, database.generate(!!options.test));
+    await fs.writeFile(options.outFile, database.toString(!!options.test));
   });
 
 program.parseAsync();

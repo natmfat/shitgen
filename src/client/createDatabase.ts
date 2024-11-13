@@ -1,4 +1,5 @@
 import { MockDatabase, MockColumn, MockTable } from "../MockDatabase";
+import { MockTypeEnum } from "../MockDatabase/MockType";
 
 import { Lexer } from "../language/Lexer";
 import { Scanner } from "../language/Scanner";
@@ -19,7 +20,23 @@ export async function createDatabase(rawSql: string) {
 
   while (scanner.hasNextToken()) {
     const startSqlPos = scanner.getPos();
-    if (scanner.expectSequence(["CREATE", "TABLE", "IF", "NOT", "EXISTS"])) {
+    // CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy');
+    if (scanner.matchesSequence(["CREATE", "TYPE"])) {
+      const typeName = scanner.currentToken();
+      scanner.nextToken();
+      scanner.expectSequence(["AS", "ENUM", "("]);
+
+      const typeArgs = scanner
+        .getTokensUntil([[")", ";"]])
+        .filter((arg) => arg !== ",")
+        .map((arg) => arg.substring(1, arg.length - 1));
+      const type = new MockTypeEnum(typeName, typeArgs);
+      database.addType(type);
+
+      type.rawSql = tokens.slice(startSqlPos, scanner.getPos()).join(" ");
+    } else if (
+      scanner.matchesSequence(["CREATE", "TABLE", "IF", "NOT", "EXISTS"])
+    ) {
       const table = new MockTable(scanner.currentToken());
       database.addTable(table);
       scanner.nextToken(); // advance past table name
@@ -37,17 +54,6 @@ export async function createDatabase(rawSql: string) {
             scanner.getTokensUntil([")"]);
             scanner.nextToken(); // advance past )
             continue;
-          }
-
-          let typeArgs: Nullable<string[]> = null;
-
-          if (columnType === "ENUM") {
-            scanner.nextToken(); // skip left paren
-            typeArgs = scanner
-              .getTokensUntil(")")
-              .filter((value) => value !== ",") // strip comments
-              .map((value) => value.substring(1, value.length - 1)); // remove starting and ending quotes
-            scanner.nextToken(); // skip right paren
           }
 
           const typeModifiers = scanner.getTokensUntil([",", [")", ";"]]);
@@ -97,14 +103,12 @@ export async function createDatabase(rawSql: string) {
             modifierGenerated ||
             !!column.reference;
           column.modifierDefault = modifierDefault || modifierGenerated;
-          column.typeArgs = typeArgs;
 
           table.addColumn(column);
         }
 
-        // no need to skip ) or ; because the while loop will do it for us
+        table.rawSql = tokens.slice(startSqlPos, scanner.getPos()).join(" ");
       }
-      table.rawSql = tokens.slice(startSqlPos, scanner.getPos()).join(" ");
     }
     scanner.nextToken();
   }

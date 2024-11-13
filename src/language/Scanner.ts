@@ -1,3 +1,4 @@
+import { assert } from "console";
 import { SQL_WHITESPACE } from "./Lexer";
 
 // @todo token until greedy method (auto balance paren)
@@ -27,7 +28,7 @@ export class Scanner {
     }
   }
 
-  expectSequence(sequence: string[]) {
+  matchesSequence(sequence: string[]) {
     let initialPos = this.pos;
     for (const expectedToken of sequence) {
       if (this.currentToken() !== expectedToken) {
@@ -39,6 +40,12 @@ export class Scanner {
     return true;
   }
 
+  expectSequence(sequence: string[]) {
+    // @todo better error message, like "unexpected '(', expected ';'"
+    assert(this.matchesSequence(sequence), "expected sequence to match");
+  }
+
+  // @todo expect should be 'match', expect should throw errors
   expect(expectedToken: string) {
     return this.currentToken() === expectedToken;
   }
