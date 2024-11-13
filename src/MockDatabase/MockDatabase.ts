@@ -1,6 +1,6 @@
 import assert from "assert";
 import { Nullable } from "../types";
-import { MockColumn, MockColumnReference } from "./MockColumn";
+import { MockColumn } from "./MockColumn";
 import { MockTable } from "./MockTable";
 import { name as packageName } from "../../package.json";
 import { MockType, MockTypeAny, MockTypeEnum } from "./MockType";

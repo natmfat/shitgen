@@ -5,7 +5,6 @@ import promptly from "promptly";
 import { name, description, version } from "../package.json";
 
 import fs from "fs/promises";
-import { sql } from "./client/sql";
 import { createDatabase } from "./client/createDatabase";
 
 // @todo testing with vitest
