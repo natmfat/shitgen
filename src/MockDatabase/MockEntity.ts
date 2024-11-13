@@ -8,16 +8,19 @@ export type GeneratedJSON<
 > = {
   [Key in MockEntityKey]: MockEntityInstance[Key] extends MockEntity
     ? ReturnType<MockEntityInstance[Key]["generateJSON"]>
-    : MockEntityInstance[Key] extends Array<infer Element extends MockEntity> // If the property is an array
-      ? ReturnType<Element["generateJSON"]>[] // Apply the generated JSON type recursively for each array element
-      : MockEntityInstance[Key] extends Record<string, MockEntity> // If the property is a record
+    // if the property is an array, apply to each element
+    : MockEntityInstance[Key] extends Array<infer Element extends MockEntity> 
+      ? ReturnType<Element["generateJSON"]>[] 
+      // if property is a record, apply to each value
+      : MockEntityInstance[Key] extends Record<string, MockEntity> 
         ? {
             [SubKey in keyof MockEntityInstance[Key]]: ReturnType<
               MockEntityInstance[Key][SubKey]["generateJSON"]
             >;
           }
-        : MockEntityInstance[Key]; // Base case for primitive types (string, number, etc.)}
+        : MockEntityInstance[Key]; // base case for primitives
 };
+
 export class MockEntity {
   name: string;
   rawSql: Nullable<string> = null;
