@@ -37,7 +37,8 @@
     "playground": "tsx ./playground.ts",
     "build": "tsup",
     "prebuild": "rimraf dist/",
-    "prepublishOnly": "pnpm run build"
+    "prepublishOnly": "pnpm run build",
+    "typecheck": "tsc"
   },
   "keywords": [],
   "author": "",

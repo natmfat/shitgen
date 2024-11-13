@@ -45,11 +45,6 @@ export class Scanner {
     assert(this.matchesSequence(sequence), "expected sequence to match");
   }
 
-  // @todo expect should be 'match', expect should throw errors
-  expect(expectedToken: string) {
-    return this.currentToken() === expectedToken;
-  }
-
   expectSequenceInternal(sequence: string[]) {
     // return false if there is no next token
     if (!this.hasNextToken()) {
@@ -67,12 +62,15 @@ export class Scanner {
     return flag;
   }
 
-  enforce(expectedToken: string) {
-    if (!this.expect(expectedToken)) {
-      throw new Error(
-        `Got ${this.currentToken()}, but expected ${expectedToken}.`
-      );
-    }
+  matches(token: string) {
+    return this.currentToken() === token;
+  }
+
+  expect(token: string) {
+    assert(
+      this.matches(token),
+      `got ${this.currentToken()}, but expected ${token}`
+    );
     this.nextToken();
     return true;
   }
@@ -104,7 +102,7 @@ export class Scanner {
       if (
         Array.isArray(expectedToken)
           ? this.expectSequenceInternal(expectedToken)
-          : this.expect(expectedToken)
+          : this.matches(expectedToken)
       ) {
         continueFlag = false;
       }

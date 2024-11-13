@@ -3,7 +3,6 @@ import { MockTypeEnum } from "../MockDatabase/MockType";
 
 import { Lexer } from "../language/Lexer";
 import { Scanner } from "../language/Scanner";
-import { Nullable } from "../types";
 
 // @todo look into parsing balanced paren?
 
@@ -40,7 +39,7 @@ export async function createDatabase(rawSql: string) {
       const table = new MockTable(scanner.currentToken());
       database.addTable(table);
       scanner.nextToken(); // advance past table name
-      if (scanner.expect("(")) {
+      if (scanner.matches("(")) {
         scanner.nextToken(); // advance past left paren
 
         // begin parsing table columns
@@ -85,14 +84,14 @@ export async function createDatabase(rawSql: string) {
 
           const column = new MockColumn(columnName, columnType);
 
-          if (typeScanner.expect("REFERENCES")) {
+          if (typeScanner.matches("REFERENCES")) {
             typeScanner.nextToken(); // advance past references
             const tableNameRef = typeScanner.currentToken();
             typeScanner.nextToken(); // advance beyond table name
-            typeScanner.enforce("("); // automatically advances beyond ( after checking current token
+            typeScanner.expect("("); // automatically advances beyond ( after checking current token
             const tableColumnRef = typeScanner.currentToken();
             typeScanner.nextToken(); // advance beyond tableColumnRef
-            typeScanner.enforce(")");
+            typeScanner.expect(")");
             column.link(tableNameRef, tableColumnRef);
           }
 
