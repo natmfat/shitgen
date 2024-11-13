@@ -1,4 +1,4 @@
-import { assert } from "console";
+import assert from "assert";
 import { SQL_WHITESPACE } from "./Lexer";
 
 // @todo token until greedy method (auto balance paren)

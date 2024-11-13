@@ -3,29 +3,25 @@ import { Nullable } from "../types";
 import { MockColumn, MockColumnReference } from "./MockColumn";
 import { MockTable } from "./MockTable";
 import { name as packageName } from "../../package.json";
-import { MockType } from "./MockType";
+import { MockType, MockTypeAny, MockTypeEnum } from "./MockType";
+import { GeneratedJSON, MockEntity } from "./MockEntity";
+
+type MockDatabaseStructure = GeneratedJSON<MockDatabase, "types" | "tables">;
 
 // intermediate "database" structure, from raw SQL to TypeScript
-export class MockDatabase {
-  tables: Record<string, MockTable> = {};
+export class MockDatabase extends MockEntity {
   types: Record<string, MockType> = {};
+  tables: Record<string, MockTable> = {};
 
-  constructor(
-    fromRecord: Record<
-      string,
-      Record<
-        string,
-        {
-          type: string;
-          modifierPrimaryKey: boolean;
-          modifierNotNull: boolean;
-          modifierDefault: boolean;
-          reference: Nullable<MockColumnReference>;
-        }
-      >
-    > = {}
-  ) {
-    Object.entries(fromRecord).forEach(([tableName, columns]) => {
+  constructor(structure: Nullable<MockDatabaseStructure> = null) {
+    super(packageName);
+    if (structure) {
+      this.fromGeneratedJSON(structure);
+    }
+  }
+
+  fromGeneratedJSON(structure: MockDatabaseStructure) {
+    Object.entries(structure.tables).forEach(([tableName, { columns }]) => {
       const table = new MockTable(tableName);
       this.tables[tableName] = table;
       Object.entries(columns).forEach(
@@ -36,6 +32,24 @@ export class MockDatabase {
         }
       );
     });
+
+    Object.entries(structure.types).forEach(
+      ([typeName, { type, typeArgs }]) => {
+        switch (type) {
+          case "enum":
+            this.addType(new MockTypeEnum(typeName, typeArgs as string[]));
+            break;
+          case "any":
+          default:
+            this.addType(new MockTypeAny(typeName));
+            return;
+        }
+      }
+    );
+  }
+
+  generateJSON() {
+    return MockEntity.generateJSON(this as MockDatabase, ["types", "tables"]);
   }
 
   addTable(table: MockTable) {
@@ -69,16 +83,12 @@ export class MockDatabase {
     return this.types[typeName];
   }
 
-  generateJSON() {
-    return `{${Object.values(this.tables)
-      .map((table) => {
-        return `"${table.name}":${table.generateJSON()}`;
-      })
-      .join(",")}}`;
-  }
-
   generateMockDatabase() {
-    return `const database = new MockDatabase(${this.generateJSON()});`;
+    return `const database = new MockDatabase(${JSON.stringify(
+      this.generateJSON(),
+      null,
+      4
+    )});`;
   }
 
   /**

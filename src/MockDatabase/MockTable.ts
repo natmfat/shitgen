@@ -2,11 +2,10 @@ import assert from "assert";
 import { Nullable } from "../types";
 import { MockColumn } from "./MockColumn";
 import { MockDatabase } from "./MockDatabase";
-import { MockComponent } from "./MockComponent";
+import { MockEntity } from "./MockEntity";
 
-export class MockTable extends MockComponent {
+export class MockTable extends MockEntity {
   columns: MockColumn[] = [];
-  rawSql: Nullable<string> = null;
 
   /**
    * Primary key of the table
@@ -14,6 +13,10 @@ export class MockTable extends MockComponent {
    * @todo multiple keys???
    */
   primaryKey: Nullable<MockColumn> = null;
+
+  generateJSON() {
+    return MockEntity.generateJSON(this as MockTable, ["name", "columns"]);
+  }
 
   /**
    * Add a column to the table, assuming one with the same name does not exist
@@ -29,12 +32,6 @@ export class MockTable extends MockComponent {
 
   getColumn(columnName: string) {
     return this.columns.find((column) => column.name === columnName) || null;
-  }
-
-  generateJSON() {
-    return `{${this.columns
-      .map((column) => `"${column.name}": ${column.toString()}`)
-      .join(",")}}`;
   }
 
   /**

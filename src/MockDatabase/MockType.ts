@@ -1,17 +1,36 @@
-import { Nullable } from "../types";
-import { MockComponent } from "./MockComponent";
+import { MockEntity } from "./MockEntity";
 
-export class MockType extends MockComponent {
-  rawSql: Nullable<string> = null;
+export class MockType extends MockEntity {
+  constructor(
+    name: string,
+    public type: string = "any",
+    public typeArgs: unknown = undefined
+  ) {
+    super(name);
+  }
+
+  generateJSON() {
+    return MockEntity.generateJSON(this as MockType, [
+      "name",
+      "type",
+      "typeArgs",
+    ]);
+  }
+}
+
+export class MockTypeAny extends MockType {
+  constructor(name: string) {
+    super(name, "any", undefined);
+  }
 
   toString() {
-    return `type ${this.formattedName} = {};`;
+    return `type ${this.formattedName} = any;`;
   }
 }
 
 export class MockTypeEnum extends MockType {
-  constructor(name: string, private typeArgs: string[]) {
-    super(name);
+  constructor(name: string, public typeArgs: string[]) {
+    super(name, "enum", typeArgs);
   }
 
   toString() {

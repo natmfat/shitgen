@@ -1,7 +1,7 @@
 // why not just use the table class instead of tableName?
 
 import { Nullable } from "../types";
-import { MockComponent } from "./MockComponent";
+import { MockEntity } from "./MockEntity";
 import { MockDatabase } from "./MockDatabase";
 
 // because not all tables may be parsed yet!
@@ -23,7 +23,7 @@ const convertType = {
   UUID: "string", // @todo uuid validator type
 };
 
-export class MockColumn extends MockComponent {
+export class MockColumn extends MockEntity {
   type: string;
 
   modifierPrimaryKey: boolean = false;
@@ -37,30 +37,23 @@ export class MockColumn extends MockComponent {
     this.type = type;
   }
 
+  generateJSON() {
+    // yes, this as MockColumn is necessary because "this" is an inaccessible type
+    return MockEntity.generateJSON(this as MockColumn, [
+      "type",
+      "modifierPrimaryKey",
+      "modifierNotNull",
+      "modifierDefault",
+      "reference",
+    ]);
+  }
+
   link(tableName: string, columnName: string) {
     if (this.reference) {
       throw new Error("Column already linked");
     }
 
     this.reference = { tableName, columnName } satisfies MockColumnReference;
-  }
-
-  /**
-   * Stringify relevant column data
-   * @returns A record version of the column
-   */
-  toString() {
-    return JSON.stringify(
-      (
-        [
-          "type",
-          "modifierPrimaryKey",
-          "modifierNotNull",
-          "modifierDefault",
-          "reference",
-        ] satisfies Array<keyof MockColumn>
-      ).reduce((acc, key) => ({ ...acc, [key]: this[key] }), {})
-    );
   }
 
   generateType(database: MockDatabase) {

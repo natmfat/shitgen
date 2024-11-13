@@ -40,15 +40,11 @@ program
   .action(async (inputSchema: string) => {
     const rawSql = await fs.readFile(inputSchema, "utf-8");
     const database = await createDatabase(rawSql);
-    for (const table of Object.values(database.tables)) {
-      if (table.rawSql) {
-        await sql.unsafe(table.rawSql);
-      }
-    }
     for (const type of Object.values(database.types)) {
-      if (type.rawSql) {
-        await sql.unsafe(type.rawSql);
-      }
+      await type.push();
+    }
+    for (const table of Object.values(database.tables)) {
+      await table.push();
     }
     process.exit(0);
   });
