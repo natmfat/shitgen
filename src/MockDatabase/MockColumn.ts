@@ -40,6 +40,7 @@ export class MockColumn extends MockEntity {
   generateJSON() {
     // yes, this as MockColumn is necessary because "this" is an inaccessible type
     return MockEntity.generateJSON(this as MockColumn, [
+      "name",
       "type",
       "modifierPrimaryKey",
       "modifierNotNull",

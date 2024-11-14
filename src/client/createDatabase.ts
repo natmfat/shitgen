@@ -32,7 +32,6 @@ export async function createDatabase(rawSql: string) {
       const type = new MockTypeEnum(typeName, typeArgs);
       database.addType(type);
       scanner.nextToken(); // advance past )
-      scanner.nextToken(); // advance past ;
       type.rawSql = tokens.slice(startSqlPos, scanner.getPos()).join(" ");
     } else if (
       scanner.matchesSequence(["CREATE", "TABLE", "IF", "NOT", "EXISTS"])

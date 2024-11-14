@@ -1,16 +1,16 @@
 CREATE TYPE provider_name_ AS ENUM ('google', 'github', 'discord');
 
-CREATE TABLE IF NOT EXISTS provider_ (
-  id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-  name provider_name_ NOT NULL,
-  profile_id text NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS palette_ (
   id bigint UNIQUE GENERATED ALWAYS AS IDENTITY,
   name text NOT NULL,
   thumbnail_colors text[],
   raw_css text NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS provider_ (
+  id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  name provider_name_ NOT NULL,
+  profile_id text NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS project_ (
@@ -29,3 +29,4 @@ CREATE TABLE IF NOT EXISTS preview_ (
   thumbnail_src text,
   UNIQUE (project_id, version)
 );
+

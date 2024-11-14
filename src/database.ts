@@ -18,6 +18,7 @@ const database = new MockDatabase({
             "name": "palette_",
             "columns": [
                 {
+                    "name": "id",
                     "type": "bigint",
                     "modifierPrimaryKey": false,
                     "modifierNotNull": true,
@@ -25,6 +26,7 @@ const database = new MockDatabase({
                     "reference": null
                 },
                 {
+                    "name": "name",
                     "type": "text",
                     "modifierPrimaryKey": false,
                     "modifierNotNull": true,
@@ -32,6 +34,7 @@ const database = new MockDatabase({
                     "reference": null
                 },
                 {
+                    "name": "thumbnail_colors",
                     "type": "text[]",
                     "modifierPrimaryKey": false,
                     "modifierNotNull": false,
@@ -39,6 +42,36 @@ const database = new MockDatabase({
                     "reference": null
                 },
                 {
+                    "name": "raw_css",
+                    "type": "text",
+                    "modifierPrimaryKey": false,
+                    "modifierNotNull": true,
+                    "modifierDefault": false,
+                    "reference": null
+                }
+            ]
+        },
+        "provider_": {
+            "name": "provider_",
+            "columns": [
+                {
+                    "name": "id",
+                    "type": "bigint",
+                    "modifierPrimaryKey": true,
+                    "modifierNotNull": true,
+                    "modifierDefault": true,
+                    "reference": null
+                },
+                {
+                    "name": "name",
+                    "type": "provider_name_",
+                    "modifierPrimaryKey": false,
+                    "modifierNotNull": true,
+                    "modifierDefault": false,
+                    "reference": null
+                },
+                {
+                    "name": "profile_id",
                     "type": "text",
                     "modifierPrimaryKey": false,
                     "modifierNotNull": true,
@@ -51,6 +84,7 @@ const database = new MockDatabase({
             "name": "project_",
             "columns": [
                 {
+                    "name": "id",
                     "type": "uuid",
                     "modifierPrimaryKey": true,
                     "modifierNotNull": true,
@@ -58,6 +92,7 @@ const database = new MockDatabase({
                     "reference": null
                 },
                 {
+                    "name": "palette_id",
                     "type": "bigint",
                     "modifierPrimaryKey": false,
                     "modifierNotNull": true,
@@ -68,6 +103,7 @@ const database = new MockDatabase({
                     }
                 },
                 {
+                    "name": "prompt",
                     "type": "text",
                     "modifierPrimaryKey": false,
                     "modifierNotNull": true,
@@ -75,6 +111,7 @@ const database = new MockDatabase({
                     "reference": null
                 },
                 {
+                    "name": "public",
                     "type": "boolean",
                     "modifierPrimaryKey": false,
                     "modifierNotNull": false,
@@ -87,6 +124,7 @@ const database = new MockDatabase({
             "name": "preview_",
             "columns": [
                 {
+                    "name": "id",
                     "type": "bigint",
                     "modifierPrimaryKey": false,
                     "modifierNotNull": true,
@@ -94,6 +132,7 @@ const database = new MockDatabase({
                     "reference": null
                 },
                 {
+                    "name": "project_id",
                     "type": "uuid",
                     "modifierPrimaryKey": false,
                     "modifierNotNull": true,
@@ -104,6 +143,7 @@ const database = new MockDatabase({
                     }
                 },
                 {
+                    "name": "version",
                     "type": "smallint",
                     "modifierPrimaryKey": false,
                     "modifierNotNull": false,
@@ -111,6 +151,7 @@ const database = new MockDatabase({
                     "reference": null
                 },
                 {
+                    "name": "prompt",
                     "type": "text",
                     "modifierPrimaryKey": false,
                     "modifierNotNull": true,
@@ -118,6 +159,7 @@ const database = new MockDatabase({
                     "reference": null
                 },
                 {
+                    "name": "code",
                     "type": "text",
                     "modifierPrimaryKey": false,
                     "modifierNotNull": false,
@@ -125,6 +167,7 @@ const database = new MockDatabase({
                     "reference": null
                 },
                 {
+                    "name": "thumbnail_src",
                     "type": "text",
                     "modifierPrimaryKey": false,
                     "modifierNotNull": false,
@@ -151,6 +194,16 @@ export type PaletteOptional = "id";
 export type PaletteRelationship = {
 }
 const palette = new Model<PaletteData, PaletteAutoGenerated, PaletteOptional, PaletteRelationship>("palette_", database);
+export type ProviderData = {
+  id: number;
+  name: ProviderName;
+  profile_id: string;
+}
+export type ProviderAutoGenerated = "id";
+export type ProviderOptional = "id";
+export type ProviderRelationship = {
+}
+const provider = new Model<ProviderData, ProviderAutoGenerated, ProviderOptional, ProviderRelationship>("provider_", database);
 export type ProjectData = {
   id: string;
   palette_id: number;
@@ -177,4 +230,4 @@ export type PreviewRelationship = {
   project_id: ProjectData;
 }
 const preview = new Model<PreviewData, PreviewAutoGenerated, PreviewOptional, PreviewRelationship>("preview_", database);
-export const shitgen = { palette, project, preview };
+export const shitgen = { palette, provider, project, preview };
