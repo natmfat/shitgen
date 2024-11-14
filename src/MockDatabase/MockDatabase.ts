@@ -20,6 +20,15 @@ export class MockDatabase extends MockEntity {
     }
   }
 
+  async push() {
+    for (const entity of [
+      ...Object.values(this.types),
+      ...Object.values(this.tables),
+    ]) {
+      await entity.push();
+    }
+  }
+
   fromGeneratedJSON(structure: MockDatabaseStructure) {
     Object.entries(structure.tables).forEach(([tableName, { columns }]) => {
       const table = new MockTable(tableName);
