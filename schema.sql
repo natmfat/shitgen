@@ -7,11 +7,6 @@ CREATE TABLE IF NOT EXISTS palette_ (
   raw_css text NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS provider_ (
-  id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-  name provider_name_ NOT NULL,
-  profile_id text NOT NULL
-);
 
 CREATE TABLE IF NOT EXISTS project_ (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -25,8 +20,13 @@ CREATE TABLE IF NOT EXISTS preview_ (
   project_id uuid REFERENCES project_(id),
   version smallint DEFAULT 0,
   prompt text NOT NULL,
+  UNIQUE (project_id, version),
   code text,
-  thumbnail_src text,
-  UNIQUE (project_id, version)
+  thumbnail_src text
 );
 
+CREATE TABLE IF NOT EXISTS provider_ (
+  id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  name provider_name_ NOT NULL,
+  profile_id text NOT NULL
+);

@@ -94,9 +94,7 @@ export class MockDatabase extends MockEntity {
 
   generateMockDatabase() {
     return `const database = new MockDatabase(${JSON.stringify(
-      this.generateJSON(),
-      null,
-      4
+      this.generateJSON()
     )});`;
   }
 

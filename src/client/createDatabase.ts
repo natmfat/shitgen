@@ -1,7 +1,7 @@
 import { MockDatabase, MockColumn, MockTable } from "../MockDatabase";
 import { MockTypeEnum } from "../MockDatabase/MockType";
 
-import { Lexer } from "../language/Lexer";
+import { Lexer, SQL_OPERATORS } from "../language/Lexer";
 import { Scanner } from "../language/Scanner";
 
 // @todo look into parsing balanced paren?
@@ -43,27 +43,26 @@ export async function createDatabase(rawSql: string) {
         scanner.nextToken(); // advance past left paren
 
         // begin parsing table columns
-        while (scanner.untilToken(";")) {
+        parseTable: while (scanner.untilToken(";")) {
           const columnName = scanner.currentToken();
+          if (columnName === ";") {
+            break parseTable;
+          }
+
+          // if it's "UNIQUE" or "PRIMARY", this ain't a column name
+          else if (columnName === columnName.toUpperCase()) {
+            scanner.getTokensUntil([")"]);
+            scanner.nextToken(); // advance past )
+            if (scanner.matches(",")) {
+              scanner.nextToken(); // advance past comma, if there
+            }
+            continue parseTable;
+          }
+
           const columnType = scanner.nextToken();
           scanner.nextToken();
 
-          // if it's "UNIQUE" or "PRIMARY", this ain't a column name
-          if (columnName === columnName.toUpperCase()) {
-            scanner.getTokensUntil([")"]);
-            scanner.nextToken(); // advance past )
-            continue;
-          }
-
           const typeModifiers = scanner.getTokensUntil([",", [")", ";"]]);
-
-          // @todo investigate more deeply (basically just keep skipping if no column name)
-          // we should only hit this if something went wrong tho
-          if (!columnName || !columnType) {
-            scanner.nextToken();
-            continue;
-          }
-
           scanner.nextToken(); // advance past comma
 
           const typeScanner = new Scanner(typeModifiers);
