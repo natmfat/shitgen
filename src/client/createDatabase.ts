@@ -1,7 +1,7 @@
 import { MockDatabase, MockColumn, MockTable } from "../MockDatabase";
 import { MockTypeEnum } from "../MockDatabase/MockType";
 
-import { Lexer, SQL_OPERATORS } from "../language/Lexer";
+import { Lexer } from "../language/Lexer";
 import { Scanner } from "../language/Scanner";
 
 // @todo look into parsing balanced paren?
