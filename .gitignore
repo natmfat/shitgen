@@ -3,3 +3,5 @@ dist
 
 archive.ts
 playground.ts
+
+.DS_Store
