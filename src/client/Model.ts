@@ -226,8 +226,8 @@ export class Model<
     )}
       ${this.clearFragmentArray(joinFragment)}
       ${this.generateWhere({ where })}
-      ${limit ? sql`LIMIT ${limit}` : sql``}
       ${this.generateOrderBy({ orderBy })}
+      ${limit ? sql`LIMIT ${limit}` : sql``}
     `;
 
     return rows.map(
