@@ -17,6 +17,63 @@ NOTE: I did not look at how other libraries achieve type generation, so the appr
 pnpm add shitgen -D
 ```
 
+## Quickstart
+
+1. Setup a schema using basic DDL - only a subset of SQL is actually supported though
+
+```sql
+-- app/.server/database/schema.sql
+CREATE TABLE IF NOT EXISTS palette_ (
+  id bigint UNIQUE GENERATED ALWAYS AS IDENTITY,
+  name text NOT NULL,
+  thumbnail_colors text[] NOT NULL,
+  raw_css text NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS project_ (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  palette_id bigint REFERENCES palette_(id) DEFAULT 0,
+  prompt text NOT NULL,
+  public boolean DEFAULT true NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS preview_ (
+  id bigint UNIQUE GENERATED ALWAYS AS IDENTITY,
+  project_id uuid REFERENCES project_(id),
+  version smallint DEFAULT 0 NOT NULL,
+  prompt text NOT NULL,
+  code text,
+  thumbnail_src text,
+  UNIQUE (project_id, version)
+);
+```
+
+2. Use the `shitgen` CLI to push changes to the database and generate the client. You can use the following scripts, updating the paths accordingly.
+
+```js
+// package.json
+{
+    // yep, deletes the entire database
+    "db:nuke": "shitgen nuke --force",
+    // pushes changes to the database based on the schema & seeds it (optional)
+    "db:seed": "shitgen push ./app/.server/database/schema.sql && tsx ./app/.server/database/seed.ts",
+    // generates the client that you actually import
+    "db:generate": "shitgen generate ./app/.server/database/schema.sql --out-file ./app/.server/database/client.ts",
+}
+```
+
+3. Import and use the client, similar to Prisma
+
+```ts
+// app/routes/_index/action.server.ts
+const project = await shitgen.project.create({
+  select: ["id"],
+  data: formData,
+});
+```
+
+If you're stuck, I use `shitgen` in my clone of [v0](https://github.com/natmfat/v0) so check it out.
+
 ## Usage
 
 Nuke your database, clearing it of all data and schemas. Migrations are for the weak.
